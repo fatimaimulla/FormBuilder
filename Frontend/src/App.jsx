@@ -5,7 +5,6 @@ function App() {
   
   return (
     <>
-      <h1>Fatima Mithrajeeth <br/><br/> F♡M</h1>
       <CustomNavbar/>
     </>
   )
