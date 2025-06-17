@@ -11,10 +11,10 @@ function App() {
       <div className="h-screen flex flex-col">
       <CustomNavbar />
       <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-        <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
+        <div className="px-6 md:w-1/5 w-full bg-white py-4 border">
           <Sidebar />
         </div>
-        <div className="px-6 md:w-3/5 w-full bg-white p-4 border">
+        <div className="md:w-3/5 w-full bg-white border">
           <Canvas />
         </div>
         <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
