@@ -8,7 +8,7 @@ import { useDraggable } from '@dnd-kit/core';
 const DraggableItem = ({ id, label, Icon, type }) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id,
-    data: { type, label,Icon},
+    data: { type, label},
   });
 
   return (

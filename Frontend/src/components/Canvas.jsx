@@ -1,6 +1,5 @@
-// Canvas.jsx
 import { useDroppable } from '@dnd-kit/core';
-
+import renderField from '../../Functions/RenderElements';
 export default function Canvas({ elements }) {
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
@@ -19,7 +18,8 @@ export default function Canvas({ elements }) {
                 key={el.id}
                 className="p-2 border rounded bg-white shadow-sm"
               >
-                {el.label} ({el.type})
+                {renderField(el)}
+
               </div>
             ))}
           </div>

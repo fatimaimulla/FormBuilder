@@ -14,10 +14,11 @@ function App() {
     setActiveDragItem(event.active.data.current)
     console.log(event.active.data.current)
   }
-  useEffect(() =>
-  {
-   // console.log(activeDragItem);
-  },[activeDragItem])
+
+  // useEffect(() =>
+  // {
+    
+  // },[elements])
 
   function handleDragEnd(event) {
     const { over, active } = event
@@ -30,6 +31,7 @@ function App() {
       setElements((prev) => [...prev, newField])
     }
     setActiveDragItem(null)
+    console.log(elements);
   }
 
   return (
