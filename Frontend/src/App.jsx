@@ -25,9 +25,6 @@ function App() {
     
   };
   
-    
-  
-
   function handleDragEnd(event) {
     const { over, active } = event
     if (over && over.id === 'canvas-dropzone') {

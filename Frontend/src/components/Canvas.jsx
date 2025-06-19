@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import renderField from '../../Functions/RenderElements';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Grip  } from 'lucide-react';
+
 export default function Canvas({ elements ,handleDelete}) {
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
@@ -22,12 +23,13 @@ export default function Canvas({ elements ,handleDelete}) {
                 {withLabelAboveInput(el.type) ? (
                   <>
                     {/* Label */}
-                    <label className="block font-medium text-sm px-2 text-gray-700">
+                    <label className="block font-semibold text-sm px-2 text-gray-700">
                       {el.label}
                     </label>
 
                     {/* Input + Delete */}
                     <div className="group flex items-center justify-between gap-2 p-2">
+                      <Grip className='opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400'/>
                       <div className="flex-1">
                         {renderField({ ...el, label: "" })} {/* No duplicate label */}
                       </div>
@@ -40,6 +42,7 @@ export default function Canvas({ elements ,handleDelete}) {
                 ) : (
                   // For checkbox, radio, section
                   <div className="flex justify-between items-center p-2">
+                    <Grip className='opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400'/>
                     <div>{renderField(el)}</div>
                     <Trash2
                       className="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400"
