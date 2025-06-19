@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import renderField from '../../Functions/RenderElements';
-export default function Canvas({ elements }) {
+import { Trash2 } from 'lucide-react';
+export default function Canvas({ elements ,handleDelete}) {
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
   });
@@ -16,10 +17,11 @@ export default function Canvas({ elements }) {
               <div
                 
                 key={el.id}
-                className="p-2 border rounded bg-white shadow-sm"
+                className="p-2 border rounded bg-white shadow-sm "
               >
                 {renderField(el)}
-
+                {/* <button className='bg-gray-400' onClick={()=>handleDelete(el.id)} >X</button> */}
+                <Trash2 onClick={()=>handleDelete(el.id)}/>
               </div>
             ))}
           </div>

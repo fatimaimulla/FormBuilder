@@ -5,20 +5,22 @@ export default function renderField(field) {
         <>
           
           {field.label}
-          <input type="text" placeholder={field.label} className="border rounded px-3 py-2 w-full" />
+          <input type="text" placeholder={"Enter text"} className="border rounded px-3 py-2 w-full" />
         </>);
       case "number":
         return (<>
           {field.label}
           
-          <input type="number" placeholder={field.label} className="border rounded px-3 py-2 w-full" /></>);
+          <input type="number" placeholder={"Enter number"} className="border rounded px-3 py-2 w-full" /></>);
       case "select":
         return (
           <>
            {field.label} 
-          <select className="border rounded px-3 py-2 w-full" placeholder="hello">
-           
-            <option></option>
+          <select className="border rounded px-3 py-2 w-full" defaultValue="" >
+          <option value="" disabled hidden>
+    Select an option
+              </option>
+              
             </select>
             </>
         );
@@ -55,11 +57,11 @@ export default function renderField(field) {
           <input type="date" className="border rounded px-3 py-2 w-full" /></>;
       case "section":
         return <>
-          {field.label}
+          
           <h3 className="text-lg font-bold">{field.label}</h3></>;
       default:
         return <>
-          {field.label}
+         
           <div className="text-gray-400 italic">Unknown field</div></>;
     }
   }

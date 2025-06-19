@@ -12,13 +12,21 @@ function App() {
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
-    console.log(event.active.data.current)
+    //console.log(event.active.data.current)
   }
 
-  // useEffect(() =>
-  // {
+  useEffect(() =>
+  {
+    console.log(elements);
+  },[elements])
+
+  const handleDelete = (idToDelete) => {
+    setElements(prev => prev.filter(el => el.id !== idToDelete));
     
-  // },[elements])
+  };
+  
+    
+  
 
   function handleDragEnd(event) {
     const { over, active } = event
@@ -31,7 +39,7 @@ function App() {
       setElements((prev) => [...prev, newField])
     }
     setActiveDragItem(null)
-    console.log(elements);
+    //console.log(elements);
   }
 
   return (
@@ -43,7 +51,7 @@ function App() {
             <Sidebar />
           </div>
           <div className="md:w-3/5 w-full bg-white border">
-            <Canvas elements={elements} />
+            <Canvas elements={elements} handleDelete={handleDelete} />
           </div>
           <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
             <FieldConfigPanel />
