@@ -1,4 +1,3 @@
-// Sidebar.jsx
 import {
   Type, Hash, ListFilter, CheckSquare,
   Check, FileText, Calendar, AlignLeft
@@ -8,7 +7,7 @@ import { useDraggable } from '@dnd-kit/core';
 const DraggableItem = ({ id, label, Icon, type }) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id,
-    data: { type, label},
+    data: { type, label, source: 'new' },  // ✅ Mark source as 'new'
   });
 
   return (
@@ -44,7 +43,7 @@ export default function Sidebar() {
         {formElements.map((el, index) => (
           <DraggableItem
             key={index}
-            id={`draggable-${index}`}
+            id={`sidebar-draggable-${index}`}
             label={el.label}
             type={el.type}
             Icon={el.icon}

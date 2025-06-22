@@ -1,32 +1,128 @@
 JavaScript files in ./Frontend:
 
+Functions/RenderElements.jsx
+// Content of Functions/RenderElements.jsx:
+
+
+export default function renderField(field, canvas = true)
+{
+  
+  const commonInputClass = "border rounded px-3 py-2 w-full";
+  
+  const withLabelWrapper = (element) => (
+    <div className="space-y-1">
+      <label className="block font-semibold text-sm px-2 text-gray-700">{field.label}</label> <br/>
+      {element}
+    
+    </div>
+  );
+
+  switch (field.type) {
+    case "text":
+      return withLabelWrapper(<input type="text" placeholder="Enter text" className={commonInputClass} disabled={canvas} />);
+    case "number":
+      return withLabelWrapper(<input type="number" placeholder="Enter number" className={commonInputClass} disabled={canvas}/>);
+    case "select":
+      return withLabelWrapper(
+        <select className={commonInputClass} defaultValue="" disabled={canvas}>
+          <option value="" disabled hidden>Select an option</option>
+        </select>
+      );
+    case "file":
+      return withLabelWrapper(<input type="file" className="w-full" disabled={canvas}/>);
+    case "date":
+      return withLabelWrapper(<input type="date" className={commonInputClass} disabled={canvas}/>);
+    case "checkbox":
+      return (
+        <label className="inline-flex items-center space-x-2">
+          <input type="checkbox" disabled={canvas}/>
+          <span>{" "+field.label}</span>
+        </label>
+      );
+    case "radio":
+      return (
+        withLabelWrapper(
+         
+        <label className="inline-flex items-center space-x-2" >
+          <input type="radio" disabled={canvas}/>
+            <span>{ " option 1"}</span>
+        </label>)
+      );
+    case "section":
+      return <h3 className="text-lg font-bold">{field.label}</h3>;
+    default:
+      return <div className="text-gray-400 italic">Unknown field</div>;
+  }
+}
+
+
 src/App.jsx
 // Content of src/App.jsx:
 import './App.css'
+import { DndContext , DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
+import { useEffect, useState } from 'react'
 
 function App() {
+  const [elements, setElements] = useState([])
+  const [activeDragItem, setActiveDragItem] = useState(null)
+
+  function handleDragStart(event) {
+    setActiveDragItem(event.active.data.current)
+    //console.log(event.active.data.current)
+  }
+
+  useEffect(() =>
+  {
+    console.log(elements);
+  },[elements])
+
+  const handleDelete = (idToDelete) => {
+    setElements(prev => prev.filter(el => el.id !== idToDelete));
+    
+  };
   
+  function handleDragEnd(event) {
+    const { over, active } = event
+    if (over && over.id === 'canvas-dropzone') {
+      const newField = {
+        id: Date.now(),
+        type: active.data.current?.type,
+        label: active.data.current?.label || 'New Field'
+      }
+      setElements((prev) => [...prev, newField])
+    }
+    setActiveDragItem(null)
+    //console.log(elements);
+  }
+
   return (
-    <>
+    <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-      <CustomNavbar />
-      <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-        <div className="px-6 md:w-1/5 w-full bg-white py-4 border">
-          <Sidebar />
-        </div>
-        <div className="md:w-3/5 w-full bg-white border">
-          <Canvas />
-        </div>
-        <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
-          <FieldConfigPanel />
+        <CustomNavbar />
+        <div className="flex flex-col md:flex-row flex-1 overflow-auto">
+          <div className="px-6 md:w-1/5 w-full bg-white py-4 border">
+            <Sidebar />
+          </div>
+          <div className="md:w-3/5 w-full bg-white border">
+            <Canvas elements={elements} handleDelete={handleDelete} />
+          </div>
+          <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
+            <FieldConfigPanel />
+          </div>
         </div>
       </div>
-    </div>
-    </>
+      <DragOverlay>
+        {activeDragItem ? (
+          <div className="p-2 px-4 rounded border bg-white shadow-lg text-sm font-medium text-gray-800">
+            {activeDragItem.label}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   )
 }
 
@@ -49,26 +145,50 @@ createRoot(document.getElementById('root')).render(
 
 src/components/Canvas.jsx
 // Content of src/components/Canvas.jsx:
-import { useState } from "react";
+import { useDroppable } from '@dnd-kit/core';
+import renderField from '../../Functions/RenderElements';
+import { Trash2, Grip  } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-export default function Canvas() {
-  const [elements, setElements] = useState([]);
+
+export default function Canvas({ elements ,handleDelete}) {
+ 
+  const { setNodeRef } = useDroppable({
+    id: 'canvas-dropzone',
+  });
+  const [selectedId, setSelectedId] = useState(null);
+  
+  useEffect(() =>
+  {
+    console.log(selectedId)
+  },[selectedId])
 
   return (
-    <div className="w-full h-full bg-gray-100 p-6 overflow-auto">
-      <div className="bg-white rounded-lg p-6 h-28 max-w-3xl mx-auto">
+    <div ref={setNodeRef} className="w-full h-full bg-gray-100 p-6 overflow-auto">
+      <div className="bg-white rounded-lg p-6 min-h-[100px] max-w-3xl mx-auto">
         {elements.length === 0 ? (
-          <p className="w-full text-xl font-semibold border border-gray-200 rounded px-7 py-2 ">New Form</p>
+          <p className="text-xl font-semibold text-gray-400">Drop form elements here</p>
         ) : (
           <div className="space-y-4">
-            {elements.map((el, index) => (
+            {elements.map((el) => (
               <div
-                key={index}
-                className="p-2 border rounded bg-white shadow-sm"
-              >
-                {el.label}
+              key={el.id}
+              onClick={() => setSelectedId(el.id)}
+              className={`group p-2 border rounded bg-white shadow-sm transition-all duration-200 ${
+                selectedId === el.id ? 'border-blue-500 ring-2 ring-blue-300' : ''
+              }`}
+            >
+                <div className=" flex items-center items-start justify-between gap-2 pointer">
+                  <Grip className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1" />
+                  <div className="flex-1 pointer-events-none">{renderField(el)}</div>
+                  <Trash2
+                    className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1"
+                    onClick={() => handleDelete(el.id)}
+                  />
+                </div>
               </div>
             ))}
+
           </div>
         )}
       </div>
@@ -126,27 +246,42 @@ export default function CustomNavbar() {
 
 src/components/Sidebar.jsx
 // Content of src/components/Sidebar.jsx:
+// Sidebar.jsx
 import {
-  Type,
-  Hash,
-  ListFilter,
-  CheckSquare,
-  Check,
-  FileText,
-  Calendar,
-  AlignLeft
+  Type, Hash, ListFilter, CheckSquare,
+  Check, FileText, Calendar, AlignLeft
 } from "lucide-react";
+import { useDraggable } from '@dnd-kit/core';
+
+const DraggableItem = ({ id, label, Icon, type }) => {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { type, label},
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="cursor-pointer p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
+    >
+      <Icon className="w-4 h-4 text-gray-600" />
+      <span>{label}</span>
+    </li>
+  );
+};
 
 export default function Sidebar() {
   const formElements = [
-    { label: "Text Input", icon: Type },
-    { label: "Number Input", icon: Hash },
-    { label: "Dropdown", icon: ListFilter },
-    { label: "Checkbox", icon: CheckSquare },
-    { label: "Radio Group", icon: Check },
-    { label: "File Upload", icon: FileText },
-    { label: "Date Picker", icon: Calendar },
-    { label: "Section Title", icon: AlignLeft }
+    { label: "Text Input", icon: Type, type: "text" },
+    { label: "Number Input", icon: Hash, type: "number" },
+    { label: "Dropdown", icon: ListFilter, type: "select" },
+    { label: "Checkbox", icon: CheckSquare, type: "checkbox" },
+    { label: "Radio Group", icon: Check, type: "radio" },
+    { label: "File Upload", icon: FileText, type: "file" },
+    { label: "Date Picker", icon: Calendar, type: "date" },
+    { label: "Section Title", icon: AlignLeft, type: "section" },
   ];
 
   return (
@@ -155,13 +290,13 @@ export default function Sidebar() {
       <p className="mb-4 text-gray-500">Drag and drop elements onto the canvas</p>
       <ul className="space-y-2">
         {formElements.map((el, index) => (
-          <li
+          <DraggableItem
             key={index}
-            className="cursor-pointer p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
-          >
-            <el.icon className="w-4 h-4 text-gray-600" />
-            <span>{el.label}</span>
-          </li>
+            id={`draggable-${index}`}
+            label={el.label}
+            type={el.type}
+            Icon={el.icon}
+          />
         ))}
       </ul>
     </div>

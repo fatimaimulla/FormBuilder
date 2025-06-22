@@ -1,15 +1,20 @@
 import { useDroppable } from '@dnd-kit/core';
 import renderField from '../../Functions/RenderElements';
 import { Trash2, Grip  } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 
 export default function Canvas({ elements ,handleDelete}) {
+ 
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
   });
-
-  const withLabelAboveInput = (type) => {
-    return ["text", "number", "select", "file", "date"].includes(type);
-  };
+  const [selectedId, setSelectedId] = useState(null);
+  
+  useEffect(() =>
+  {
+    console.log(selectedId)
+  },[selectedId])
 
   return (
     <div ref={setNodeRef} className="w-full h-full bg-gray-100 p-6 overflow-auto">
@@ -19,39 +24,24 @@ export default function Canvas({ elements ,handleDelete}) {
         ) : (
           <div className="space-y-4">
             {elements.map((el) => (
-              <div key={el.id} className="group p-2 border rounded bg-white shadow-sm space-y-1">
-                {withLabelAboveInput(el.type) ? (
-                  <>
-                    {/* Label */}
-                    <label className="block font-semibold text-sm px-2 text-gray-700">
-                      {el.label}
-                    </label>
-
-                    {/* Input + Delete */}
-                    <div className="group flex items-center justify-between gap-2 p-2">
-                      <Grip className='opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400'/>
-                      <div className="flex-1">
-                        {renderField({ ...el, label: "" })} {/* No duplicate label */}
-                      </div>
-                      <Trash2
-                        className="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400"
-                        onClick={() => handleDelete(el.id)}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  // For checkbox, radio, section
-                  <div className="flex justify-between items-center p-2">
-                    <Grip className='opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400'/>
-                    <div>{renderField(el)}</div>
-                    <Trash2
-                      className="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400"
-                      onClick={() => handleDelete(el.id)}
-                    />
-                  </div>
-                )}
+              <div
+              key={el.id}
+              onClick={() => setSelectedId(el.id)}
+              className={`group p-2 border rounded bg-white shadow-sm transition-all duration-200 ${
+                selectedId === el.id ? 'border-blue-500 ring-2 ring-blue-300' : ''
+              }`}
+            >
+                <div className=" flex items-center items-start justify-between gap-2 pointer">
+                  <Grip className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1" />
+                  <div className="flex-1 pointer-events-none">{renderField(el)}</div>
+                  <Trash2
+                    className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1"
+                    onClick={() => handleDelete(el.id)}
+                  />
+                </div>
               </div>
             ))}
+
           </div>
         )}
       </div>
