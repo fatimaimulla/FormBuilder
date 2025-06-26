@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 function App() {
   const [elements, setElements] = useState([])
   const [activeDragItem, setActiveDragItem] = useState(null)
+  const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -28,12 +29,18 @@ function App() {
   function handleDragEnd(event) {
     const { over, active } = event
     if (over && over.id === 'canvas-dropzone') {
+      const labelText = active.data.current?.label?.toLowerCase() || "value";
+      const firstWord = labelText.split(" ")[0];
       const newField = {
         id: Date.now(),
         type: active.data.current?.type,
-        label: active.data.current?.label || 'New Field'
+        label: active.data.current?.label || 'New Field',
+        placeholder: ["text", "number", "date"].includes(active.data.current?.type)
+          ? "Enter " + firstWord + "... "
+          : undefined
       }
       setElements((prev) => [...prev, newField])
+      setSelectedElementId(newField.id);
     }
     setActiveDragItem(null)
     //console.log(elements);
@@ -48,11 +55,13 @@ function App() {
             <Sidebar />
           </div>
           <div className="md:w-3/5 w-full bg-white border">
-            <Canvas elements={elements} handleDelete={handleDelete} />
+            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
           </div>
-          <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
-            <FieldConfigPanel />
-          </div>
+          {elements.length > 0 && (
+            <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
+              <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements}/>
+            </div>
+          )}
         </div>
       </div>
       <DragOverlay>

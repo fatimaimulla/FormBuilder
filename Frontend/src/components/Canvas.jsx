@@ -4,7 +4,7 @@ import { Trash2, Grip  } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 
-export default function Canvas({ elements ,handleDelete}) {
+export default function Canvas({ elements , handleDelete, onElementSelect }) {
  
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
@@ -26,16 +26,18 @@ export default function Canvas({ elements ,handleDelete}) {
             {elements.map((el) => (
               <div
               key={el.id}
-              onClick={() => setSelectedId(el.id)}
+              onClick={() => {
+                setSelectedId(el.id);
+                onElementSelect(el.id);}}
               className={`group p-2 border rounded bg-white shadow-sm transition-all duration-200 ${
                 selectedId === el.id ? 'border-blue-500 ring-2 ring-blue-300' : ''
               }`}
             >
                 <div className="flex items-center justify-between gap-2">
-                  <Grip className="h-5 cursor-grab active:cursor-grabbing opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1" />
+                  <Grip className="h-5 cursor-grab active:cursor-grabbing opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 text-gray-400 mt-1" />
                   <div className="flex-1 pointer-events-none">{renderField(el)}</div>
                   <Trash2
-                    className="h-5 cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1"
+                    className="h-5 cursor-pointer opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 text-gray-400 mt-1"
                     onClick={() => handleDelete(el.id)}
                   />
                 </div>

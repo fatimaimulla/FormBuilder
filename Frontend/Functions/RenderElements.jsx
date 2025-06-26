@@ -13,7 +13,7 @@ export default function renderField(field, canvas = true)
 
   switch (field.type) {
     case "text":
-      return withLabelWrapper(<input type="text" placeholder="Enter text..." className={commonInputClass} disabled={canvas} />);
+      return withLabelWrapper(<input type="text" placeholder={field.placeholder || "Enter text..."} className={commonInputClass} disabled={canvas} />);
     case "number":
       return withLabelWrapper(<input type="number" placeholder="Enter number..." className={commonInputClass} disabled={canvas}/>);
     case "select":
