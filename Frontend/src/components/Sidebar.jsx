@@ -7,7 +7,7 @@ import { useDraggable } from '@dnd-kit/core';
 const DraggableItem = ({ id, label, Icon, type }) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id,
-    data: { type, label, source: 'new' },  // ✅ Mark source as 'new'
+    data: { type, label, source: 'new' }, 
   });
 
   return (
@@ -15,7 +15,7 @@ const DraggableItem = ({ id, label, Icon, type }) => {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="cursor-pointer p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
+      className="cursor-grab active:cursor-grabbing p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
     >
       <Icon className="w-4 h-4 text-gray-600" />
       <span>{label}</span>

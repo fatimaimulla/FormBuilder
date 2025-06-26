@@ -1,11 +1,11 @@
 export default function renderField(field, canvas = true)
 {
   
-  const commonInputClass = "border rounded px-3 py-2 w-full";
+  const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
   
   const withLabelWrapper = (element) => (
-    <div className="space-y-1">
-      <label className="block font-semibold text-sm px-2 text-gray-700">{field.label}</label> <br/>
+    <div className="flex flex-col gap-3">
+      <label className="block font-semibold text-sm text-gray-700">{field.label}</label> 
       {element}
     
     </div>
@@ -13,13 +13,13 @@ export default function renderField(field, canvas = true)
 
   switch (field.type) {
     case "text":
-      return withLabelWrapper(<input type="text" placeholder="Enter text" className={commonInputClass} disabled={canvas} />);
+      return withLabelWrapper(<input type="text" placeholder="Enter text..." className={commonInputClass} disabled={canvas} />);
     case "number":
-      return withLabelWrapper(<input type="number" placeholder="Enter number" className={commonInputClass} disabled={canvas}/>);
+      return withLabelWrapper(<input type="number" placeholder="Enter number..." className={commonInputClass} disabled={canvas}/>);
     case "select":
       return withLabelWrapper(
         <select className={commonInputClass} defaultValue="" disabled={canvas}>
-          <option value="" disabled hidden>Select an option</option>
+          <option value="" disabled hidden>Select an option...</option>
         </select>
       );
     case "file":
@@ -43,7 +43,10 @@ export default function renderField(field, canvas = true)
         </label>)
       );
     case "section":
-      return <h3 className="text-lg font-bold">{field.label}</h3>;
+      return <div className="">
+        <h3 className="text-lg font-bold">{field.label}</h3>
+        <p className="text-gray-500">{field.label}</p> 
+      </div>;
     default:
       return <div className="text-gray-400 italic">Unknown field</div>;
   }
