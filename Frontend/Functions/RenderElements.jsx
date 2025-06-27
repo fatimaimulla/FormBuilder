@@ -28,7 +28,7 @@ export default function renderField(field, canvas = true)
       return withLabelWrapper(<input type="date" className={commonInputClass} disabled={canvas}/>);
     case "checkbox":
       return (
-        <label className="inline-flex items-center space-x-2">
+        <label className="inline-flex items-center space-x-3">
           <input type="checkbox" disabled={canvas}/>
           <span>{" "+field.label}</span>
         </label>
@@ -37,7 +37,7 @@ export default function renderField(field, canvas = true)
       return (
         withLabelWrapper(
          
-        <label className="inline-flex items-center space-x-2" >
+        <label className="inline-flex items-center space-x-3" >
           <input type="radio" disabled={canvas}/>
             <span>{ " option 1"}</span>
         </label>)
@@ -45,7 +45,7 @@ export default function renderField(field, canvas = true)
     case "section":
       return <div className="">
         <h3 className="text-lg font-bold">{field.label}</h3>
-        <p className="text-gray-500">{field.label}</p> 
+        <p className="text-gray-500">{field.description}</p> 
       </div>;
     default:
       return <div className="text-gray-400 italic">Unknown field</div>;

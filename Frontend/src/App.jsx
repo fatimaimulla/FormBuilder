@@ -27,23 +27,28 @@ function App() {
   };
   
   function handleDragEnd(event) {
-    const { over, active } = event
+    const { over, active } = event;
     if (over && over.id === 'canvas-dropzone') {
-      const labelText = active.data.current?.label?.toLowerCase() || "value";
-      const firstWord = labelText.split(" ")[0];
+      const type = active.data.current?.type; // ✅ declare first!
+      const label = active.data.current?.label || "New Field";
+      const firstWord = label.toLowerCase().split(" ")[0];
+
       const newField = {
         id: Date.now(),
-        type: active.data.current?.type,
-        label: active.data.current?.label || 'New Field',
-        placeholder: ["text", "number", "date"].includes(active.data.current?.type)
-          ? "Enter " + firstWord + "... "
-          : undefined
-      }
-      setElements((prev) => [...prev, newField])
+        type,
+        label,
+        placeholder: ["text", "number", "date"].includes(type)
+          ? "Enter " + firstWord + "..."
+          : undefined,
+        options: ["select", "radio"].includes(type)
+          ? [{ label: "Option 1", value: "option-1" }]
+          : undefined,
+      };
+
+      setElements((prev) => [...prev, newField]);
       setSelectedElementId(newField.id);
     }
-    setActiveDragItem(null)
-    //console.log(elements);
+    setActiveDragItem(null);
   }
 
   return (
@@ -51,14 +56,14 @@ function App() {
       <div className="h-screen flex flex-col">
         <CustomNavbar />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-          <div className="px-6 md:w-1/5 w-full bg-white py-4 border">
+          <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
           </div>
-          <div className="md:w-3/5 w-full bg-white border">
+          <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
             <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
           </div>
           {elements.length > 0 && (
-            <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
+            <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
               <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements}/>
             </div>
           )}

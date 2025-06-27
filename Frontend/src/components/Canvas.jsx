@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import renderField from '../../Functions/RenderElements';
+import renderField from '../../functions/RenderElements';
 import { Trash2, Grip  } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
