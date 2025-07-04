@@ -42,15 +42,24 @@ export default function renderField(field, canvas = true)
         }</span>
         </label>
       );
-    case "radio":
-      return (
-        withLabelWrapper(
-         
-        <label className="inline-flex items-center space-x-3" >
-          <input type="radio" disabled={canvas}/>
-            <span>{ " option 1"}</span>
-        </label>)
-      );
+      case "radio":
+        return withLabelWrapper(
+          <div className="space-y-2">
+            {field.options?.map((opt, index) => (
+              <>
+              <label key={index} className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name={`radio-${field.id}`} // ensures grouped radios
+                  value={opt.value}
+                  disabled={canvas}
+                />
+                <span>{opt.label}</span>
+                </label><br />
+                </>
+            ))}
+          </div>
+        );
     case "section":
       return <div className="">
         <h3 className="text-lg font-bold">{field.label}</h3>
