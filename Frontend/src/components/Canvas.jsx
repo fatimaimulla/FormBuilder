@@ -41,9 +41,11 @@ export default function Canvas({ elements , handleDelete, onElementSelect }) {
                     onClick={() => handleDelete(el.id)}
                   />
                 </div>
+                
               </div>
-            ))}
 
+            ))}
+             
           </div>
         )}
       </div>

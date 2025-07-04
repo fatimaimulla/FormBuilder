@@ -20,7 +20,14 @@ export default function renderField(field, canvas = true)
     case "select":
       return withLabelWrapper(
         <select className={commonInputClass} defaultValue="" disabled={canvas}>
+
           <option value="" disabled hidden>Select an option...</option>
+         {field.options?.map((opt, index) => (
+    <option key={index} value={opt.value}>
+      {opt.label}
+    </option>
+  ))}
+          
         </select>
       );
     case "file":
@@ -31,7 +38,8 @@ export default function renderField(field, canvas = true)
       return (
         <label className="inline-flex items-center space-x-3">
           <input type="checkbox" disabled={canvas}/>
-          <span>{" "+field.label}</span>
+          <span>{" "+field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+        }</span>
         </label>
       );
     case "radio":
