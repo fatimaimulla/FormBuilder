@@ -14,10 +14,17 @@
     ├── App.jsx
     ├── index.css
     ├── main.jsx
-    ├── assets
-    │   └── react.svg
     └── components
         ├── Canvas.jsx
         ├── FieldConfigPanel.jsx
         ├── Navbar.jsx
-        └── Sidebar.jsx
+        ├── Sidebar.jsx
+        └── FieldConfigPanel
+            ├── CheckboxConfig.jsx
+            ├── DateConfig.jsx
+            ├── FileConfig.jsx
+            ├── NumberConfig.jsx
+            ├── RadioConfig.jsx
+            ├── SectionConfig.jsx
+            ├── SelectConfig.jsx
+            └── TextConfig.jsx

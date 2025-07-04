@@ -5,7 +5,8 @@ export default function renderField(field, canvas = true)
   
   const withLabelWrapper = (element) => (
     <div className="flex flex-col gap-3">
-      <label className="block font-semibold text-sm text-gray-700">{field.label}</label> 
+      <label className="block font-semibold text-sm text-gray-700">{field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+}</label> 
       {element}
     
     </div>

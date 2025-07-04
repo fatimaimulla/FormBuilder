@@ -2,16 +2,7 @@ export default function NumberConfig({ field, updateField }) {
     return (
         <div className="space-y-5">
 
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Placeholder */}
       <div>

@@ -2,16 +2,14 @@ JavaScript files in ./Frontend:
 
 Functions/RenderElements.jsx
 // Content of Functions/RenderElements.jsx:
-
-
 export default function renderField(field, canvas = true)
 {
   
-  const commonInputClass = "border rounded px-3 py-2 w-full";
+  const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
   
   const withLabelWrapper = (element) => (
-    <div className="space-y-1">
-      <label className="block font-semibold text-sm px-2 text-gray-700">{field.label}</label> <br/>
+    <div className="flex flex-col gap-3">
+      <label className="block font-semibold text-sm text-gray-700">{field.label}</label> 
       {element}
     
     </div>
@@ -19,13 +17,13 @@ export default function renderField(field, canvas = true)
 
   switch (field.type) {
     case "text":
-      return withLabelWrapper(<input type="text" placeholder="Enter text" className={commonInputClass} disabled={canvas} />);
+      return withLabelWrapper(<input type="text" placeholder={field.placeholder || "Enter text..."} className={commonInputClass} disabled={canvas} />);
     case "number":
-      return withLabelWrapper(<input type="number" placeholder="Enter number" className={commonInputClass} disabled={canvas}/>);
+      return withLabelWrapper(<input type="number" placeholder="Enter number..." className={commonInputClass} disabled={canvas}/>);
     case "select":
       return withLabelWrapper(
         <select className={commonInputClass} defaultValue="" disabled={canvas}>
-          <option value="" disabled hidden>Select an option</option>
+          <option value="" disabled hidden>Select an option...</option>
         </select>
       );
     case "file":
@@ -34,7 +32,7 @@ export default function renderField(field, canvas = true)
       return withLabelWrapper(<input type="date" className={commonInputClass} disabled={canvas}/>);
     case "checkbox":
       return (
-        <label className="inline-flex items-center space-x-2">
+        <label className="inline-flex items-center space-x-3">
           <input type="checkbox" disabled={canvas}/>
           <span>{" "+field.label}</span>
         </label>
@@ -43,18 +41,20 @@ export default function renderField(field, canvas = true)
       return (
         withLabelWrapper(
          
-        <label className="inline-flex items-center space-x-2" >
+        <label className="inline-flex items-center space-x-3" >
           <input type="radio" disabled={canvas}/>
             <span>{ " option 1"}</span>
         </label>)
       );
     case "section":
-      return <h3 className="text-lg font-bold">{field.label}</h3>;
+      return <div className="">
+        <h3 className="text-lg font-bold">{field.label}</h3>
+        <p className="text-gray-500">{field.description}</p> 
+      </div>;
     default:
       return <div className="text-gray-400 italic">Unknown field</div>;
   }
 }
-
 
 src/App.jsx
 // Content of src/App.jsx:
@@ -69,6 +69,7 @@ import { useEffect, useState } from 'react'
 function App() {
   const [elements, setElements] = useState([])
   const [activeDragItem, setActiveDragItem] = useState(null)
+  const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -86,17 +87,28 @@ function App() {
   };
   
   function handleDragEnd(event) {
-    const { over, active } = event
+    const { over, active } = event;
     if (over && over.id === 'canvas-dropzone') {
+      const type = active.data.current?.type; // ✅ declare first!
+      const label = active.data.current?.label || "New Field";
+      const firstWord = label.toLowerCase().split(" ")[0];
+
       const newField = {
         id: Date.now(),
-        type: active.data.current?.type,
-        label: active.data.current?.label || 'New Field'
-      }
-      setElements((prev) => [...prev, newField])
+        type,
+        label,
+        placeholder: ["text", "number", "date"].includes(type)
+          ? "Enter " + firstWord + "..."
+          : undefined,
+        options: ["select", "radio"].includes(type)
+          ? [{ label: "Option 1", value: "option-1" }]
+          : undefined,
+      };
+
+      setElements((prev) => [...prev, newField]);
+      setSelectedElementId(newField.id);
     }
-    setActiveDragItem(null)
-    //console.log(elements);
+    setActiveDragItem(null);
   }
 
   return (
@@ -104,15 +116,17 @@ function App() {
       <div className="h-screen flex flex-col">
         <CustomNavbar />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-          <div className="px-6 md:w-1/5 w-full bg-white py-4 border">
+          <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
           </div>
-          <div className="md:w-3/5 w-full bg-white border">
-            <Canvas elements={elements} handleDelete={handleDelete} />
+          <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
+            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
           </div>
-          <div className="px-6 md:w-1/5 w-full bg-white p-4 border">
-            <FieldConfigPanel />
-          </div>
+          {elements.length > 0 && (
+            <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
+              <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements}/>
+            </div>
+          )}
         </div>
       </div>
       <DragOverlay>
@@ -146,12 +160,12 @@ createRoot(document.getElementById('root')).render(
 src/components/Canvas.jsx
 // Content of src/components/Canvas.jsx:
 import { useDroppable } from '@dnd-kit/core';
-import renderField from '../../Functions/RenderElements';
+import renderField from '../../functions/RenderElements';
 import { Trash2, Grip  } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 
-export default function Canvas({ elements ,handleDelete}) {
+export default function Canvas({ elements , handleDelete, onElementSelect }) {
  
   const { setNodeRef } = useDroppable({
     id: 'canvas-dropzone',
@@ -173,16 +187,18 @@ export default function Canvas({ elements ,handleDelete}) {
             {elements.map((el) => (
               <div
               key={el.id}
-              onClick={() => setSelectedId(el.id)}
+              onClick={() => {
+                setSelectedId(el.id);
+                onElementSelect(el.id);}}
               className={`group p-2 border rounded bg-white shadow-sm transition-all duration-200 ${
                 selectedId === el.id ? 'border-blue-500 ring-2 ring-blue-300' : ''
               }`}
             >
-                <div className=" flex items-center items-start justify-between gap-2 pointer">
-                  <Grip className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1" />
+                <div className="flex items-center justify-between gap-2">
+                  <Grip className="h-5 cursor-grab active:cursor-grabbing opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 text-gray-400 mt-1" />
                   <div className="flex-1 pointer-events-none">{renderField(el)}</div>
                   <Trash2
-                    className="cursor-move opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 cursor-pointer text-gray-400 mt-1"
+                    className="h-5 cursor-pointer opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 text-gray-400 mt-1"
                     onClick={() => handleDelete(el.id)}
                   />
                 </div>
@@ -196,16 +212,75 @@ export default function Canvas({ elements ,handleDelete}) {
   );
 }
 
-
 src/components/FieldConfigPanel.jsx
 // Content of src/components/FieldConfigPanel.jsx:
-export default function FieldConfigPanel () {
-    return (
-        <div>
-            <h1>Config Panel</h1>
-        </div>
-    )
+import TextConfig from "./FieldConfigPanel/TextConfig";
+import NumberConfig from "./FieldConfigPanel/NumberConfig";
+import SelectConfig from "./FieldConfigPanel/SelectConfig";
+import CheckboxConfig from "./FieldConfigPanel/CheckboxConfig";
+import RadioConfig from "./FieldConfigPanel/RadioConfig";
+import FileConfig from "./FieldConfigPanel/FileConfig";
+import DateConfig from "./FieldConfigPanel/DateConfig";
+import SectionConfig from "./FieldConfigPanel/SectionConfig";
+
+export default function FieldConfigPanel({ elements, selectedElementId, setElements }) {
+  const selectedElement = elements.find(el => el.id === selectedElementId);
+
+  const updateField = (key, value) => {
+    const updated = elements.map(el =>
+      el.id === selectedElementId ? { ...el, [key]: value } : el
+    );
+    setElements(updated);
+  };
+
+  if (!selectedElement) {
+    return <div className="text-gray-400 italic">Click a field to configure it</div>;
+  }
+
+  const props = { field: selectedElement, updateField };
+
+  // 🔁 Component router
+  let ConfigComponent;
+  switch (selectedElement.type) {
+    case "text":
+      ConfigComponent = TextConfig;
+      break;
+    case "number":
+      ConfigComponent = NumberConfig;
+      break;
+    case "select":
+      ConfigComponent = SelectConfig;
+      break;
+    case "checkbox":
+      ConfigComponent = CheckboxConfig;
+      break;
+    case "radio":
+      ConfigComponent = RadioConfig;
+      break;
+    case "file":
+      ConfigComponent = FileConfig;
+      break;
+    case "date":
+      ConfigComponent = DateConfig;
+      break;
+    case "section":
+      ConfigComponent = SectionConfig;
+      break;
+    default:
+      return <div className="text-gray-400 italic">Unsupported field type</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Common Heading */}
+      <h2 className="text-lg font-semibold mb-5">Field Configuration</h2>
+
+      {/* Dynamic field config panel */}
+      <ConfigComponent {...props} />
+    </div>
+  );
 }
+
 
 src/components/Navbar.jsx
 // Content of src/components/Navbar.jsx:
@@ -246,7 +321,6 @@ export default function CustomNavbar() {
 
 src/components/Sidebar.jsx
 // Content of src/components/Sidebar.jsx:
-// Sidebar.jsx
 import {
   Type, Hash, ListFilter, CheckSquare,
   Check, FileText, Calendar, AlignLeft
@@ -256,7 +330,7 @@ import { useDraggable } from '@dnd-kit/core';
 const DraggableItem = ({ id, label, Icon, type }) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id,
-    data: { type, label},
+    data: { type, label, source: 'new' }, 
   });
 
   return (
@@ -264,7 +338,7 @@ const DraggableItem = ({ id, label, Icon, type }) => {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="cursor-pointer p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
+      className="cursor-grab active:cursor-grabbing p-2.5 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 flex items-center gap-3"
     >
       <Icon className="w-4 h-4 text-gray-600" />
       <span>{label}</span>
@@ -292,13 +366,587 @@ export default function Sidebar() {
         {formElements.map((el, index) => (
           <DraggableItem
             key={index}
-            id={`draggable-${index}`}
+            id={`sidebar-draggable-${index}`}
             label={el.label}
             type={el.type}
             Icon={el.icon}
           />
         ))}
       </ul>
+    </div>
+  );
+}
+
+
+src/components/FieldConfigPanel/CheckboxConfig.jsx
+// Content of src/components/FieldConfigPanel/CheckboxConfig.jsx:
+export default function CheckboxConfig({ field, updateField }) {
+    return (
+        <div className="space-y-5">
+
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? 'bg-black' : 'bg-gray-300'
+            }`}
+            onClick={() => updateField("required", !field.required)}
+        >
+            <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                field.required ? 'translate-x-6' : 'translate-x-1'
+            }`}
+            />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+    </div>
+    )
+}
+
+src/components/FieldConfigPanel/DateConfig.jsx
+// Content of src/components/FieldConfigPanel/DateConfig.jsx:
+export default function DateConfig({ field, updateField }) {
+    return (
+        <div className="space-y-5">
+
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Placeholder */}
+      <div>
+        <label className="block text-md font-medium mb-1">Placeholder</label>
+        <input
+          type="text"
+          value={field.placeholder || ""}
+          onChange={(e) => updateField("placeholder", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? 'bg-black' : 'bg-gray-300'
+            }`}
+            onClick={() => updateField("required", !field.required)}
+        >
+            <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                field.required ? 'translate-x-6' : 'translate-x-1'
+            }`}
+            />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+    </div>
+    )
+}
+
+src/components/FieldConfigPanel/FileConfig.jsx
+// Content of src/components/FieldConfigPanel/FileConfig.jsx:
+export default function FileConfig({ field, updateField }) {
+    return (
+        <div className="space-y-5">
+
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Placeholder */}
+      <div>
+        <label className="block text-md font-medium mb-1">Placeholder</label>
+        <input
+          type="text"
+          value={field.placeholder || ""}
+          onChange={(e) => updateField("placeholder", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? 'bg-black' : 'bg-gray-300'
+            }`}
+            onClick={() => updateField("required", !field.required)}
+        >
+            <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                field.required ? 'translate-x-6' : 'translate-x-1'
+            }`}
+            />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+    </div>
+    )
+}
+
+src/components/FieldConfigPanel/NumberConfig.jsx
+// Content of src/components/FieldConfigPanel/NumberConfig.jsx:
+export default function NumberConfig({ field, updateField }) {
+    return (
+        <div className="space-y-5">
+
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Placeholder */}
+      <div>
+        <label className="block text-md font-medium mb-1">Placeholder</label>
+        <input
+          type="text"
+          value={field.placeholder || ""}
+          onChange={(e) => updateField("placeholder", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? 'bg-black' : 'bg-gray-300'
+            }`}
+            onClick={() => updateField("required", !field.required)}
+        >
+            <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                field.required ? 'translate-x-6' : 'translate-x-1'
+            }`}
+            />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+
+      <div className="flex flex-row justify-between gap-4">
+        {/* Min Length */}
+        <div className="flex-1">
+            <label className="block text-md font-medium mb-1">Min Length</label>
+            <input
+            type="number"
+            value={field.minLength || ""}
+            onChange={(e) => updateField("minLength", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            min={0}
+            />
+        </div>
+
+        {/* Max Length */}
+        <div className="flex-1">
+            <label className="block text-md font-medium mb-1">Max Length</label>
+            <input
+            type="number"
+            value={field.maxLength || ""}
+            onChange={(e) => updateField("maxLength", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            min={0}
+            />
+        </div>
+      </div>
+    </div>
+    )
+}
+
+src/components/FieldConfigPanel/RadioConfig.jsx
+// Content of src/components/FieldConfigPanel/RadioConfig.jsx:
+import { Trash2, Plus } from "lucide-react";
+
+export default function RadioConfig({ field, updateField }) {
+  // Ensure options array exists
+  const options = field.options && field.options.length > 0
+    ? field.options
+    : [{ label: "Option 1", value: "option-1" }];
+
+  // Initialize options into the field if missing
+  if (!field.options || field.options.length === 0) {
+    updateField("options", options);
+  }
+
+  const updateOption = (index, key, value) => {
+    const updated = [...options];
+    updated[index][key] = value;
+    updateField("options", updated);
+  };
+
+  const addOption = () => {
+    const newOption = {
+      label: "",
+      value: `option-${options.length + 1}`,
+    };
+    updateField("options", [...options, newOption]);
+  };
+
+  const removeOption = (index) => {
+    const updated = options.filter((_, i) => i !== index);
+    updateField("options", updated);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required Toggle */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+          type="button"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? "bg-black" : "bg-gray-300"
+          }`}
+          onClick={() => updateField("required", !field.required)}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+              field.required ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+
+      {/* Options Section */}
+      <div className="space-y-4">
+        <h2 className="text-md font-semibold">Options</h2>
+
+        {/* Options List */}
+        <div className="space-y-2">
+          {options.map((opt, index) => (
+            <div key={index} className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Option label"
+                value={opt.label}
+                onChange={(e) =>
+                  updateOption(index, "label", e.target.value)
+                }
+                className="w-[40%] border px-3 py-2 rounded"
+              />
+              <input
+                type="text"
+                placeholder="Value"
+                value={opt.value}
+                onChange={(e) =>
+                  updateOption(index, "value", e.target.value)
+                }
+                className="w-[40%] border px-3 py-2 rounded"
+              />
+              <button
+                onClick={() => removeOption(index)}
+                className="text-black"
+              >
+                <Trash2 className="w-4 h-4 ml-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Option Button */}
+        <button
+          onClick={addOption}
+          className="w-full border border-gray-300 text-sm text-black py-2 rounded flex items-center justify-center gap-2 hover:bg-gray-100 transition"
+        >
+          <Plus className="w-4 h-4 text-black font-semibold" />
+          <span className="font-semibold">Add Option</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+src/components/FieldConfigPanel/SectionConfig.jsx
+// Content of src/components/FieldConfigPanel/SectionConfig.jsx:
+export default function SectionConfig({ field, updateField }) {
+  return (
+    <div className="space-y-5">
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-md font-medium mb-1">Description</label>
+        <textarea
+          rows={4}
+          value={field.description || ""}
+          onChange={(e) => updateField("description", e.target.value)}
+          className="w-full border px-3 py-2 rounded resize-none"
+          placeholder="Add a description..."
+        />
+      </div>
+    </div>
+  );
+}
+
+
+src/components/FieldConfigPanel/SelectConfig.jsx
+// Content of src/components/FieldConfigPanel/SelectConfig.jsx:
+import { Trash2, Plus } from "lucide-react";
+
+export default function SelectConfig({ field, updateField }) {
+  // Ensure options array exists
+  const options = field.options && field.options.length > 0
+    ? field.options
+    : [{ label: "Option 1", value: "option-1" }];
+
+  // Initialize options into the field if missing
+  if (!field.options || field.options.length === 0) {
+    updateField("options", options);
+  }
+
+  const updateOption = (index, key, value) => {
+    const updated = [...options];
+    updated[index][key] = value;
+    updateField("options", updated);
+  };
+
+  const addOption = () => {
+    const newOption = {
+      label: "",
+      value: `option-${options.length + 1}`,
+    };
+    updateField("options", [...options, newOption]);
+  };
+
+  const removeOption = (index) => {
+    const updated = options.filter((_, i) => i !== index);
+    updateField("options", updated);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Placeholder */}
+      <div>
+        <label className="block text-md font-medium mb-1">Placeholder</label>
+        <input
+          type="text"
+          value={field.placeholder || ""}
+          onChange={(e) => updateField("placeholder", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required Toggle */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+          type="button"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? "bg-black" : "bg-gray-300"
+          }`}
+          onClick={() => updateField("required", !field.required)}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+              field.required ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+
+      {/* Options Section */}
+      <div className="space-y-4">
+        <h2 className="text-md font-semibold">Options</h2>
+
+        {/* Options List */}
+        <div className="space-y-2">
+          {options.map((opt, index) => (
+            <div key={index} className="flex gap-2 items-center">
+              <input
+                type="text"
+                placeholder="Option label"
+                value={opt.label}
+                onChange={(e) =>
+                  updateOption(index, "label", e.target.value)
+                }
+                className="w-[40%] border px-3 py-2 rounded"
+              />
+              <input
+                type="text"
+                placeholder="Value"
+                value={opt.value}
+                onChange={(e) =>
+                  updateOption(index, "value", e.target.value)
+                }
+                className="w-[40%] border px-3 py-2 rounded"
+              />
+              <button
+                onClick={() => removeOption(index)}
+                className="text-black"
+              >
+                <Trash2 className="w-4 h-4 ml-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Option Button */}
+        <button
+          onClick={addOption}
+          className="w-full border border-gray-300 text-sm text-black py-2 rounded flex items-center justify-center gap-2 hover:bg-gray-100 transition"
+        >
+          <Plus className="w-4 h-4 text-black font-semibold" />
+          <span className="font-semibold">Add Option</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+src/components/FieldConfigPanel/TextConfig.jsx
+// Content of src/components/FieldConfigPanel/TextConfig.jsx:
+export default function TextConfig({ field, updateField }) {
+  return (
+    <div className="space-y-5">
+
+      {/* Label */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={field.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Placeholder */}
+      <div>
+        <label className="block text-md font-medium mb-1">Placeholder</label>
+        <input
+          type="text"
+          value={field.placeholder || ""}
+          onChange={(e) => updateField("placeholder", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+
+      {/* Required */}
+      <div className="flex items-center justify-start gap-2">
+        <button
+            type="button"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? 'bg-black' : 'bg-gray-300'
+            }`}
+            onClick={() => updateField("required", !field.required)}
+        >
+            <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                field.required ? 'translate-x-6' : 'translate-x-1'
+            }`}
+            />
+        </button>
+        <label className="text-md font-medium">Required field</label>
+      </div>
+
+      <div className="flex flex-row justify-between gap-4">
+        {/* Min Length */}
+        <div className="flex-1">
+            <label className="block text-md font-medium mb-1">Min Length</label>
+            <input
+            type="number"
+            value={field.minLength || ""}
+            onChange={(e) => updateField("minLength", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            min={0}
+            />
+        </div>
+
+        {/* Max Length */}
+        <div className="flex-1">
+            <label className="block text-md font-medium mb-1">Max Length</label>
+            <input
+            type="number"
+            value={field.maxLength || ""}
+            onChange={(e) => updateField("maxLength", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            min={0}
+            />
+        </div>
+      </div>
+
+      {/* Validation Pattern */}
+      <div>
+        <label className="block text-md font-medium mb-1">
+          Validation Pattern (Regex)
+        </label>
+        <input
+          type="text"
+          value={field.pattern || ""}
+          onChange={(e) => updateField("pattern", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          placeholder="e.g. ^[a-zA-Z]+$"
+        />
+      </div>
     </div>
   );
 }

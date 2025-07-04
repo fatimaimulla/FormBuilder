@@ -59,7 +59,16 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
       {/* Common Heading */}
       <h2 className="text-lg font-semibold mb-5">Field Configuration</h2>
 
-      {/* Dynamic field config panel */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={selectedElement.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+      
       <ConfigComponent {...props} />
     </div>
   );
