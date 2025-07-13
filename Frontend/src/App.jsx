@@ -4,12 +4,15 @@ import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
+import FormPreview from './components/FormPreview'
+import LogicPanel from './components/LogicPanel'
 import { useEffect, useState } from 'react'
 
 function App() {
   const [elements, setElements] = useState([])
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
+  const [mode, setMode] = useState("config");
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -54,7 +57,7 @@ function App() {
   return (
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-        <CustomNavbar />
+        <CustomNavbar mode={mode} setMode={setMode} hasElements={elements.length > 0} />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
           <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
@@ -62,9 +65,17 @@ function App() {
           <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
             <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
           </div>
-          {elements.length > 0 && (
+           {elements.length > 0 && (
             <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
-              <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements}/>
+              {mode === 'config' && (
+                <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
+              )}
+              {mode === 'logic' && (
+                <LogicPanel elements={elements} setElements={setElements} />
+              )}
+              {mode === 'preview' && (
+                <FormPreview elements={elements} />
+              )}
             </div>
           )}
         </div>
