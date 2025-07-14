@@ -6,6 +6,7 @@ import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
 import LogicPanel from './components/LogicPanel'
+import ImportModal from './components/ImportModal'
 import { useEffect, useState } from 'react'
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
   const [mode, setMode] = useState("config");
+  const [showImportModal, setShowImportModal] = useState(false);
+
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -57,7 +60,7 @@ function App() {
   return (
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} />
+        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
           <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
@@ -80,6 +83,15 @@ function App() {
           )}
         </div>
       </div>
+      {showImportModal && (
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={(importedFields) => {
+            setElements(importedFields);
+            setSelectedElementId(null);
+          }}
+        />
+      )}
       <DragOverlay>
         {activeDragItem ? (
           <div className="p-2 px-4 rounded border bg-white shadow-lg text-sm font-medium text-gray-800">

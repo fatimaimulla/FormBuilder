@@ -1,6 +1,6 @@
 import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles } from 'lucide-react';
 
-export default function CustomNavbar({ mode, setMode ,elements,setElements})
+export default function CustomNavbar({ mode, setMode ,elements, setElements, onImportClick })
 {
   let hasElements = elements.length > 0;
   
@@ -70,7 +70,7 @@ export default function CustomNavbar({ mode, setMode ,elements,setElements})
           </div>
         )}
 
-        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={handleImport}>
+        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={onImportClick}>
           <Upload className='w-4 h-4'/>Import
         </button>
         <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded" onClick={handleExport}>
