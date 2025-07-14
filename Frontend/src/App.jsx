@@ -21,7 +21,7 @@ function App() {
 
   useEffect(() =>
   {
-    console.log(elements);
+    console.log("Elements data "+elements);
   },[elements])
 
   const handleDelete = (idToDelete) => {
@@ -57,7 +57,7 @@ function App() {
   return (
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-        <CustomNavbar mode={mode} setMode={setMode} hasElements={elements.length > 0} />
+        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
           <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />

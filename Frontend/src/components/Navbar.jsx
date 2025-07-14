@@ -1,6 +1,30 @@
 import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles } from 'lucide-react';
 
-export default function CustomNavbar({ mode, setMode, hasElements }) {
+export default function CustomNavbar({ mode, setMode ,elements,setElements})
+{
+  let hasElements = elements.length > 0;
+  
+  const handleExport = () => {
+  const formData = {
+    fields: elements,
+  };
+
+  const jsonString = JSON.stringify(formData, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "form-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+
+  const handleImport = () =>
+  {
+    
+  }
   return (
     <header className="bg-white text-black px-6 py-4 flex justify-between items-center shadow-md h-20">
       {/* Left: Project Name + Undo/Redo */}
@@ -46,10 +70,10 @@ export default function CustomNavbar({ mode, setMode, hasElements }) {
           </div>
         )}
 
-        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300">
+        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={handleImport}>
           <Upload className='w-4 h-4'/>Import
         </button>
-        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded">
+        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded" onClick={handleExport}>
           <Download className='w-4 h-4'/>Export
         </button>
       </div>

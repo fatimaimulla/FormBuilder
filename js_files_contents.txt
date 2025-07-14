@@ -9,7 +9,8 @@ export default function renderField(field, canvas = true)
   
   const withLabelWrapper = (element) => (
     <div className="flex flex-col gap-3">
-      <label className="block font-semibold text-sm text-gray-700">{field.label}</label> 
+      <label className="block font-semibold text-sm text-gray-700">{field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+}</label> 
       {element}
     
     </div>
@@ -23,7 +24,14 @@ export default function renderField(field, canvas = true)
     case "select":
       return withLabelWrapper(
         <select className={commonInputClass} defaultValue="" disabled={canvas}>
+
           <option value="" disabled hidden>Select an option...</option>
+         {field.options?.map((opt, index) => (
+    <option key={index} value={opt.value}>
+      {opt.label}
+    </option>
+  ))}
+          
         </select>
       );
     case "file":
@@ -34,18 +42,28 @@ export default function renderField(field, canvas = true)
       return (
         <label className="inline-flex items-center space-x-3">
           <input type="checkbox" disabled={canvas}/>
-          <span>{" "+field.label}</span>
+          <span>{" "+field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+        }</span>
         </label>
       );
-    case "radio":
-      return (
-        withLabelWrapper(
-         
-        <label className="inline-flex items-center space-x-3" >
-          <input type="radio" disabled={canvas}/>
-            <span>{ " option 1"}</span>
-        </label>)
-      );
+      case "radio":
+        return withLabelWrapper(
+          <div className="space-y-2">
+            {field.options?.map((opt, index) => (
+              <>
+              <label key={index} className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name={`radio-${field.id}`} // ensures grouped radios
+                  value={opt.value}
+                  disabled={canvas}
+                />
+                <span>{opt.label}</span>
+                </label><br />
+                </>
+            ))}
+          </div>
+        );
     case "section":
       return <div className="">
         <h3 className="text-lg font-bold">{field.label}</h3>
@@ -202,9 +220,11 @@ export default function Canvas({ elements , handleDelete, onElementSelect }) {
                     onClick={() => handleDelete(el.id)}
                   />
                 </div>
+                
               </div>
-            ))}
 
+            ))}
+             
           </div>
         )}
       </div>
@@ -275,7 +295,16 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
       {/* Common Heading */}
       <h2 className="text-lg font-semibold mb-5">Field Configuration</h2>
 
-      {/* Dynamic field config panel */}
+      <div>
+        <label className="block text-md font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={selectedElement.label || ""}
+          onChange={(e) => updateField("label", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+        />
+      </div>
+      
       <ConfigComponent {...props} />
     </div>
   );
@@ -384,16 +413,7 @@ export default function CheckboxConfig({ field, updateField }) {
     return (
         <div className="space-y-5">
 
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Required */}
       <div className="flex items-center justify-start gap-2">
@@ -422,16 +442,7 @@ export default function DateConfig({ field, updateField }) {
     return (
         <div className="space-y-5">
 
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Placeholder */}
       <div>
@@ -472,15 +483,7 @@ export default function FileConfig({ field, updateField }) {
         <div className="space-y-5">
 
       {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Placeholder */}
       <div>
@@ -520,16 +523,7 @@ export default function NumberConfig({ field, updateField }) {
     return (
         <div className="space-y-5">
 
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Placeholder */}
       <div>
@@ -626,15 +620,7 @@ export default function RadioConfig({ field, updateField }) {
   return (
     <div className="space-y-5">
       {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+    
 
       {/* Required Toggle */}
       <div className="flex items-center justify-start gap-2">
@@ -709,16 +695,7 @@ src/components/FieldConfigPanel/SectionConfig.jsx
 export default function SectionConfig({ field, updateField }) {
   return (
     <div className="space-y-5">
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+      
 
       {/* Description */}
       <div>
@@ -773,15 +750,7 @@ export default function SelectConfig({ field, updateField }) {
   return (
     <div className="space-y-5">
       {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
+     
 
       {/* Placeholder */}
       <div>
@@ -867,17 +836,6 @@ src/components/FieldConfigPanel/TextConfig.jsx
 export default function TextConfig({ field, updateField }) {
   return (
     <div className="space-y-5">
-
-      {/* Label */}
-      <div>
-        <label className="block text-md font-medium mb-1">Label</label>
-        <input
-          type="text"
-          value={field.label || ""}
-          onChange={(e) => updateField("label", e.target.value)}
-          className="w-full border px-3 py-2 rounded"
-        />
-      </div>
 
       {/* Placeholder */}
       <div>
