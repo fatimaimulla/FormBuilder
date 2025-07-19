@@ -24,7 +24,7 @@ function App() {
 
   useEffect(() =>
   {
-    console.log("Elements data "+elements);
+    console.log(elements);
   },[elements])
 
   const handleDelete = (idToDelete) => {
@@ -49,6 +49,7 @@ function App() {
         options: ["select", "radio"].includes(type)
           ? [{ label: "Option 1", value: "option-1" }]
           : undefined,
+        visibilityRules: [],
       };
 
       setElements((prev) => [...prev, newField]);
@@ -74,7 +75,7 @@ function App() {
                 <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
               )}
               {mode === 'logic' && (
-                <LogicPanel elements={elements} setElements={setElements} />
+                <LogicPanel elements={elements} setElements={setElements} selectedElementId={selectedElementId} />
               )}
               {mode === 'preview' && (
                 <FormPreview elements={elements} />

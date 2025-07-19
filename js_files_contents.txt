@@ -82,12 +82,18 @@ import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
+import FormPreview from './components/FormPreview'
+import LogicPanel from './components/LogicPanel'
+import ImportModal from './components/ImportModal'
 import { useEffect, useState } from 'react'
 
 function App() {
   const [elements, setElements] = useState([])
   const [activeDragItem, setActiveDragItem] = useState(null)
   const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
+  const [mode, setMode] = useState("config");
+  const [showImportModal, setShowImportModal] = useState(false);
+
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -96,7 +102,7 @@ function App() {
 
   useEffect(() =>
   {
-    console.log(elements);
+    console.log("Elements data "+elements);
   },[elements])
 
   const handleDelete = (idToDelete) => {
@@ -132,7 +138,7 @@ function App() {
   return (
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-        <CustomNavbar />
+        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
           <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
@@ -140,13 +146,30 @@ function App() {
           <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
             <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
           </div>
-          {elements.length > 0 && (
+           {elements.length > 0 && (
             <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
-              <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements}/>
+              {mode === 'config' && (
+                <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
+              )}
+              {mode === 'logic' && (
+                <LogicPanel elements={elements} setElements={setElements} />
+              )}
+              {mode === 'preview' && (
+                <FormPreview elements={elements} />
+              )}
             </div>
           )}
         </div>
       </div>
+      {showImportModal && (
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={(importedFields) => {
+            setElements(importedFields);
+            setSelectedElementId(null);
+          }}
+        />
+      )}
       <DragOverlay>
         {activeDragItem ? (
           <div className="p-2 px-4 rounded border bg-white shadow-lg text-sm font-medium text-gray-800">
@@ -311,14 +334,238 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
 }
 
 
+src/components/FormPreview.jsx
+// Content of src/components/FormPreview.jsx:
+import renderField from "../../functions/RenderElements"
+
+export default function FormPreview ({ elements }) {
+    return (
+        <div className="space-y-6">
+            <h2 className="text-lg font-semibold mb-4">Form Preview</h2>
+            <div className="border rounded-md">
+                <form className="space-y-4 p-5">
+                    {elements.map((el) => (
+                    <div key={el.id}>{renderField(el, false)}</div> // canvas = false
+                    ))}
+                    <button className="w-full bg-black text-white rounded p-2">Submit</button>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+src/components/ImportModal.jsx
+// Content of src/components/ImportModal.jsx:
+import { useState } from "react";
+
+export default function ImportModal({ onClose, onImport }) {
+  const [jsonData, setJsonData] = useState('');
+
+  const handleImportClick = () => {
+    try {
+      const parsed = JSON.parse(jsonData);
+      if (Array.isArray(parsed.fields)) {
+        onImport(parsed.fields);  // ✅ pass only fields
+        onClose();
+      } else {
+        alert("Invalid format. 'fields' should be an array.");
+      }
+    } catch (e) {
+      alert("Invalid JSON format.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+      <div className="bg-white rounded-lg shadow-lg max-w-xl w-full p-6 relative">
+        <h2 className="text-xl font-semibold mb-3">Import Form</h2>
+        <p className="text-sm text-gray-500 mb-3">Paste your form JSON below to import it.</p>
+        <textarea
+          rows={10}
+          className="w-full border rounded p-3 text-sm font-mono"
+          value={jsonData}
+          onChange={(e) => setJsonData(e.target.value)}
+          placeholder='{"fields": [...]}'
+        />
+        <div className="flex justify-end mt-4 space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+          >
+            Import
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+src/components/LogicPanel.jsx
+// Content of src/components/LogicPanel.jsx:
+import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+
+export default function LogicPanel({ elements, setElements }) {
+  const [rules, setRules] = useState([]);
+
+  const handleAddRule = () => {
+    setRules((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        whenFieldId: '',
+        operator: 'equals',
+        value: '',
+        action: 'show'
+      }
+    ]);
+  };
+
+  const handleRemoveRule = (id) => {
+    setRules((prev) => prev.filter(rule => rule.id !== id));
+  };
+
+  const handleRuleChange = (id, key, value) => {
+    setRules(prev =>
+      prev.map(rule =>
+        rule.id === id ? { ...rule, [key]: value } : rule
+      )
+    );
+  };
+
+  const hasEnoughFields = elements.length > 1;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold mb-5">Conditional Logic</h2>
+      <p className="text-gray-500">
+        Define when this field should be visible based on other fields' values.
+      </p>
+
+      {!hasEnoughFields && (
+        <div className="bg-gray-100 rounded border p-3 text-sm text-gray-500">
+          Add more fields to your form to create conditional logic rules.
+        </div>
+      )}
+
+      {hasEnoughFields && rules.length === 0 && (
+        <div className="bg-gray-100 rounded border p-3 text-sm text-gray-500">
+          No conditional logic rules defined yet.
+        </div>
+      )}
+
+      {hasEnoughFields &&
+        rules.map((rule, index) => (
+          <div
+            key={rule.id}
+            className="border rounded-lg p-4 space-y-3 bg-gray-50 relative"
+          >
+            <div className="absolute right-3 top-3 cursor-pointer" onClick={() => handleRemoveRule(rule.id)}>
+              <Trash2 className="w-4 h-4 text-gray-400 hover:text-black" />
+            </div>
+
+            <h3 className="font-semibold text-sm">Rule {index + 1}</h3>
+
+            <div>
+              <label className="block text-sm mb-1">When field</label>
+              <select
+                className="w-full border px-3 py-2 rounded"
+                value={rule.whenFieldId}
+                onChange={(e) => handleRuleChange(rule.id, 'whenFieldId', e.target.value)}
+              >
+                <option value="">Select field</option>
+                {elements.map(el => (
+                  <option key={el.id} value={el.id}>{el.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1">Operator</label>
+              <select
+                className="w-full border px-3 py-2 rounded"
+                value={rule.operator}
+                onChange={(e) => handleRuleChange(rule.id, 'operator', e.target.value)}
+              >
+                <option value="equals">Equals</option>
+                <option value="not-equals">Not equals</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1">Value</label>
+              <input
+                type="text"
+                className="w-full border px-3 py-2 rounded"
+                value={rule.value}
+                onChange={(e) => handleRuleChange(rule.id, 'value', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1">Action</label>
+              <select
+                className="w-full border px-3 py-2 rounded"
+                value={rule.action}
+                onChange={(e) => handleRuleChange(rule.id, 'action', e.target.value)}
+              >
+                <option value="show">Show this field</option>
+                <option value="hide">Hide this field</option>
+              </select>
+            </div>
+          </div>
+        ))}
+
+      {hasEnoughFields && (
+        <button
+          onClick={handleAddRule}
+          className="w-full border border-gray-300 text-sm text-black py-2 rounded flex items-center justify-center gap-2 hover:bg-gray-100 transition"
+        >
+          <Plus className="w-4 h-4 text-black font-semibold" />
+          <span className="font-semibold">Add Rule</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 src/components/Navbar.jsx
 // Content of src/components/Navbar.jsx:
-import { Undo } from 'lucide-react';
-import { Redo } from 'lucide-react';
-import { Download } from 'lucide-react';
-import { Upload } from 'lucide-react';
+import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles } from 'lucide-react';
 
-export default function CustomNavbar() {
+export default function CustomNavbar({ mode, setMode ,elements, setElements, onImportClick })
+{
+  let hasElements = elements.length > 0;
+  
+  const handleExport = () => {
+  const formData = {
+    fields: elements,
+  };
+
+  const jsonString = JSON.stringify(formData, null, 2);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "form-data.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+
+  const handleImport = () =>
+  {
+    
+  }
   return (
     <header className="bg-white text-black px-6 py-4 flex justify-between items-center shadow-md h-20">
       {/* Left: Project Name + Undo/Redo */}
@@ -336,10 +583,38 @@ export default function CustomNavbar() {
 
       {/* Right: Import/Export */}
       <div className="flex items-center space-x-5">
-        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300">
+        {hasElements && (
+          <div className='flex items-center space-x-0 h-10 bg-gray-100 py-1 px-1 rounded'>
+            <button
+              onClick={() => setMode('config')}
+              className={`flex items-center gap-2 px-2 py-2 rounded h-8 ${
+                mode === 'config' ? 'bg-white text-balck' : 'bg-gray-100 text-gray-600'
+              }`}>
+              <Settings className="w-4 h-4" /> Configure
+            </button>
+
+            <button
+              onClick={() => setMode('logic')}
+              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${
+                mode === 'logic' ? 'bg-white text-balck' : 'bg-gray-100 text-gray-600'
+              }`}>
+              <WandSparkles className='w-4 h-4' /> Logic
+            </button>
+
+            <button
+              onClick={() => setMode('preview')}
+              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${
+                mode === 'preview' ? 'bg-white text-black' : 'bg-gray-100 text-gray-600'
+              }`}>
+              <Eye className="w-4 h-4" /> Preview
+            </button>
+          </div>
+        )}
+
+        <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={onImportClick}>
           <Upload className='w-4 h-4'/>Import
         </button>
-        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded">
+        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded" onClick={handleExport}>
           <Download className='w-4 h-4'/>Export
         </button>
       </div>

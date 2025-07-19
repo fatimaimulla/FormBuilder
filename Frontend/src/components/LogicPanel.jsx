@@ -1,35 +1,58 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-export default function LogicPanel({ elements, setElements }) {
+export default function LogicPanel({ elements, setElements, selectedElementId }) {
+  const selectedElement = elements.find(el => el.id === selectedElementId);
   const [rules, setRules] = useState([]);
 
-  const handleAddRule = () => {
-    setRules((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        whenFieldId: '',
-        operator: 'equals',
-        value: '',
-        action: 'show'
-      }
-    ]);
-  };
+  useEffect(() => {
+    // Load rules from selected element when it changes
+    if (selectedElement) {
+      setRules(selectedElement.visibilityRules || []);
+    }
+  }, [selectedElementId]);
 
-  const handleRemoveRule = (id) => {
-    setRules((prev) => prev.filter(rule => rule.id !== id));
-  };
-
-  const handleRuleChange = (id, key, value) => {
-    setRules(prev =>
-      prev.map(rule =>
-        rule.id === id ? { ...rule, [key]: value } : rule
+  const updateElementRules = (updatedRules) => {
+    setElements(prev =>
+      prev.map(el =>
+        el.id === selectedElementId
+          ? { ...el, visibilityRules: updatedRules }
+          : el
       )
     );
   };
 
+  const handleAddRule = () => {
+    const newRule = {
+      id: Date.now(),
+      whenFieldId: '',
+      operator: 'equals',
+      value: '',
+      action: 'show'
+    };
+
+    const updatedRules = [...rules, newRule];
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
+  const handleRemoveRule = (id) => {
+    const updatedRules = rules.filter(rule => rule.id !== id);
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
+  const handleRuleChange = (id, key, value) => {
+    const updatedRules = rules.map(rule =>
+      rule.id === id ? { ...rule, [key]: value } : rule
+    );
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
   const hasEnoughFields = elements.length > 1;
+
+  const otherFields = elements.filter(el => el.id !== selectedElementId);
 
   return (
     <div className="space-y-4">
@@ -56,12 +79,16 @@ export default function LogicPanel({ elements, setElements }) {
             key={rule.id}
             className="border rounded-lg p-4 space-y-3 bg-gray-50 relative"
           >
-            <div className="absolute right-3 top-3 cursor-pointer" onClick={() => handleRemoveRule(rule.id)}>
+            <div
+              className="absolute right-3 top-3 cursor-pointer"
+              onClick={() => handleRemoveRule(rule.id)}
+            >
               <Trash2 className="w-4 h-4 text-gray-400 hover:text-black" />
             </div>
 
             <h3 className="font-semibold text-sm">Rule {index + 1}</h3>
 
+            {/* When Field */}
             <div>
               <label className="block text-sm mb-1">When field</label>
               <select
@@ -70,12 +97,13 @@ export default function LogicPanel({ elements, setElements }) {
                 onChange={(e) => handleRuleChange(rule.id, 'whenFieldId', e.target.value)}
               >
                 <option value="">Select field</option>
-                {elements.map(el => (
+                {otherFields.map(el => (
                   <option key={el.id} value={el.id}>{el.label}</option>
                 ))}
               </select>
             </div>
 
+            {/* Operator */}
             <div>
               <label className="block text-sm mb-1">Operator</label>
               <select
@@ -84,10 +112,16 @@ export default function LogicPanel({ elements, setElements }) {
                 onChange={(e) => handleRuleChange(rule.id, 'operator', e.target.value)}
               >
                 <option value="equals">Equals</option>
-                <option value="not-equals">Not equals</option>
+                <option value="not_equals">Not equals</option>
+                <option value="greater_than">Greater than</option>
+                <option value="less_than">Less than</option>
+                <option value="contains">Contains</option>
+                <option value="is_empty">Is empty</option>
+                <option value="is_not_empty">Is not empty</option>
               </select>
             </div>
 
+            {/* Value */}
             <div>
               <label className="block text-sm mb-1">Value</label>
               <input
@@ -98,6 +132,7 @@ export default function LogicPanel({ elements, setElements }) {
               />
             </div>
 
+            {/* Action */}
             <div>
               <label className="block text-sm mb-1">Action</label>
               <select

@@ -17,6 +17,9 @@
     └── components
         ├── Canvas.jsx
         ├── FieldConfigPanel.jsx
+        ├── FormPreview.jsx
+        ├── ImportModal.jsx
+        ├── LogicPanel.jsx
         ├── Navbar.jsx
         ├── Sidebar.jsx
         └── FieldConfigPanel
