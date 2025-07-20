@@ -1,28 +1,59 @@
-import React from 'react';
+import React from "react";
 
-// 🧠 Logic evaluator for visibility based on formData and rules
+const commonInputClass =
+  "border rounded px-4 py-2 w-full bg-white text-sm";
+
+const withLabelWrapper = (element, label, required) => (
+  <div className="flex flex-col gap-3">
+    <label className="block font-semibold text-sm text-gray-700">
+      {label} {required && <span style={{ color: "red" }}>*</span>}
+    </label>
+    {element}
+  </div>
+);
+
 const evaluateVisibility = (element, formData, elements) => {
   if (!element || !element.visibilityRules || element.visibilityRules.length === 0) return true;
 
-  return element.visibilityRules.every(rule => {
+  return element.visibilityRules.every((rule) => {
     const targetValue = formData[rule.whenFieldId];
     const expectedValue = rule.value;
 
     switch (rule.operator) {
-      case 'equals':
-        return rule.action === 'show' ? targetValue === expectedValue : targetValue !== expectedValue;
-      case 'not_equals':
-        return rule.action === 'show' ? targetValue !== expectedValue : targetValue === expectedValue;
-        
+      case "equals":
+        return rule.action === "show"
+          ? targetValue === expectedValue
+          : targetValue !== expectedValue;
+      case "not_equals":
+        return rule.action === "show"
+          ? targetValue !== expectedValue
+          : targetValue === expectedValue;
+      case "greater_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) > parseFloat(expectedValue)
+          : parseFloat(targetValue) <= parseFloat(expectedValue);
+      case "less_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) < parseFloat(expectedValue)
+          : parseFloat(targetValue) >= parseFloat(expectedValue);
+      case "contains":
+        return rule.action === "show"
+          ? (targetValue || "").includes(expectedValue)
+          : !(targetValue || "").includes(expectedValue);
+      case "is_empty":
+        return rule.action === "show"
+          ? !targetValue || targetValue === ""
+          : targetValue && targetValue !== "";
+      case "is_not_empty":
+        return rule.action === "show"
+          ? targetValue && targetValue !== ""
+          : !targetValue || targetValue === "";
       default:
-            return true;
-    
+        return true;
     }
   });
 };
 
-
-// ✅ Clean preview renderer component
 const PreviewRenderer = ({ elements, formData, onChange }) => {
   return (
     <div className="space-y-4">
@@ -32,60 +63,87 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
         if (!isVisible) return null;
 
         const handleChange = (e) => {
-          const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+          const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
           onChange(el.id, value);
         };
 
         switch (el.type) {
-          case 'text':
-            return (
+          case "text":
+            return withLabelWrapper(
               <input
-                key={el.id}
                 type="text"
-                value={formData[el.id] || ''}
-                placeholder={el.placeholder}
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter text..."}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
+                className={commonInputClass}
+              />, el.label, el.required
             );
-          case 'number':
-            return (
+          case "number":
+            return withLabelWrapper(
               <input
-                key={el.id}
                 type="number"
-                value={formData[el.id] || ''}
-                placeholder={el.placeholder}
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter number..."}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
+                className={commonInputClass}
+              />, el.label, el.required
             );
-          case 'select':
-            return (
+          case "select":
+            return withLabelWrapper(
               <select
-                key={el.id}
-                value={formData[el.id] || ''}
+                value={formData[el.id] || ""}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
+                className={commonInputClass}
               >
-                <option value="">Select</option>
+                <option value="" disabled hidden>
+                  Select an option...
+                </option>
                 {el.options?.map((opt, i) => (
-                  <option key={i} value={opt.value}>{opt.label}</option>
+                  <option key={i} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
-              </select>
+              </select>, el.label, el.required
             );
-          case 'checkbox':
+          case "checkbox":
             return (
-              <label key={el.id} className="flex items-center gap-2">
+              <label key={el.id} className="inline-flex items-center space-x-3">
                 <input
                   type="checkbox"
                   checked={formData[el.id] || false}
                   onChange={handleChange}
                 />
-                {el.label}
+                <span>
+                  {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
+                </span>
               </label>
             );
+          case "file":
+            return withLabelWrapper(
+              <input
+                type="file"
+                onChange={handleChange}
+                className="w-full"
+              />, el.label, el.required
+            );
+          case "date":
+            return withLabelWrapper(
+              <input
+                type="date"
+                value={formData[el.id] || ""}
+                onChange={handleChange}
+                className={commonInputClass}
+              />, el.label, el.required
+            );
+          case "section":
+            return (
+              <div key={el.id}>
+                <h3 className="text-lg font-bold">{el.label}</h3>
+                {el.description && <p className="text-gray-500">{el.description}</p>}
+              </div>
+            );
           default:
-            return null;
+            return <div key={el.id} className="text-gray-400 italic">Unknown field</div>;
         }
       })}
     </div>

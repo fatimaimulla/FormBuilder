@@ -3,8 +3,17 @@ import { Plus, Trash2 } from "lucide-react";
 
 export default function LogicPanel({ elements, setElements, selectedElementId }) {
   const selectedElement = elements.find(el => el.id === selectedElementId);
+  
+  const [showValue, setShowValue] = useState(null);
   const [rules, setRules] = useState([]);
+  const [selectedOperator, setSelectedOperator] = useState("Equals");
 
+  useEffect(() => {
+    setShowValue(!["is_empty", "is_not_empty"].includes(selectedOperator));
+    console.log(selectedOperator);
+  }, [selectedOperator]);
+  
+  
   useEffect(() => {
     // Load rules from selected element when it changes
     if (selectedElement) {
@@ -46,8 +55,10 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
     const updatedRules = rules.map(rule =>
       rule.id === id ? { ...rule, [key]: value } : rule
     );
+    setSelectedOperator(value);
     setRules(updatedRules);
     updateElementRules(updatedRules);
+    //console.log(value);
   };
 
   const hasEnoughFields = elements.length > 1;
@@ -108,7 +119,7 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
               <label className="block text-sm mb-1">Operator</label>
               <select
                 className="w-full border px-3 py-2 rounded"
-                value={rule.operator}
+                value={selectedOperator}
                 onChange={(e) => handleRuleChange(rule.id, 'operator', e.target.value)}
               >
                 <option value="equals">Equals</option>
@@ -122,7 +133,7 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
             </div>
 
             {/* Value */}
-            <div>
+            {showValue&&(<div>
               <label className="block text-sm mb-1">Value</label>
               <input
                 type="text"
@@ -130,9 +141,11 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
                 value={rule.value}
                 onChange={(e) => handleRuleChange(rule.id, 'value', e.target.value)}
               />
-            </div>
+            </div>)}
+            
 
             {/* Action */}
+            
             <div>
               <label className="block text-sm mb-1">Action</label>
               <select
