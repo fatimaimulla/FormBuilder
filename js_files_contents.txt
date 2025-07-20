@@ -2,6 +2,8 @@ JavaScript files in ./Frontend:
 
 Functions/RenderElements.jsx
 // Content of Functions/RenderElements.jsx:
+
+
 export default function renderField(field, canvas = true)
 {
   
@@ -74,6 +76,105 @@ export default function renderField(field, canvas = true)
   }
 }
 
+Functions/previewRender.jsx
+// Content of Functions/previewRender.jsx:
+import React from 'react';
+
+// 🧠 Logic evaluator for visibility based on formData and rules
+const evaluateVisibility = (element, formData, elements) => {
+  if (!element || !element.visibilityRules || element.visibilityRules.length === 0) return true;
+
+  return element.visibilityRules.every(rule => {
+    const targetValue = formData[rule.whenFieldId];
+    const expectedValue = rule.value;
+
+    switch (rule.operator) {
+      case 'equals':
+        return rule.action === 'show' ? targetValue === expectedValue : targetValue !== expectedValue;
+      case 'not_equals':
+        return rule.action === 'show' ? targetValue !== expectedValue : targetValue === expectedValue;
+        
+      default:
+            return true;
+    
+    }
+  });
+};
+
+
+// ✅ Clean preview renderer component
+const PreviewRenderer = ({ elements, formData, onChange }) => {
+  return (
+    <div className="space-y-4">
+      {elements.map((el) => {
+        if (!el) return null;
+        const isVisible = evaluateVisibility(el, formData, elements);
+        if (!isVisible) return null;
+
+        const handleChange = (e) => {
+          const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+          onChange(el.id, value);
+        };
+
+        switch (el.type) {
+          case 'text':
+            return (
+              <input
+                key={el.id}
+                type="text"
+                value={formData[el.id] || ''}
+                placeholder={el.placeholder}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded"
+              />
+            );
+          case 'number':
+            return (
+              <input
+                key={el.id}
+                type="number"
+                value={formData[el.id] || ''}
+                placeholder={el.placeholder}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded"
+              />
+            );
+          case 'select':
+            return (
+              <select
+                key={el.id}
+                value={formData[el.id] || ''}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded"
+              >
+                <option value="">Select</option>
+                {el.options?.map((opt, i) => (
+                  <option key={i} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            );
+          case 'checkbox':
+            return (
+              <label key={el.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData[el.id] || false}
+                  onChange={handleChange}
+                />
+                {el.label}
+              </label>
+            );
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+};
+
+export default PreviewRenderer;
+
+
 src/App.jsx
 // Content of src/App.jsx:
 import './App.css'
@@ -102,7 +203,7 @@ function App() {
 
   useEffect(() =>
   {
-    console.log("Elements data "+elements);
+    console.log(elements);
   },[elements])
 
   const handleDelete = (idToDelete) => {
@@ -127,6 +228,7 @@ function App() {
         options: ["select", "radio"].includes(type)
           ? [{ label: "Option 1", value: "option-1" }]
           : undefined,
+        visibilityRules: [],
       };
 
       setElements((prev) => [...prev, newField]);
@@ -152,7 +254,7 @@ function App() {
                 <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
               )}
               {mode === 'logic' && (
-                <LogicPanel elements={elements} setElements={setElements} />
+                <LogicPanel elements={elements} setElements={setElements} selectedElementId={selectedElementId} />
               )}
               {mode === 'preview' && (
                 <FormPreview elements={elements} />
@@ -336,23 +438,52 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
 
 src/components/FormPreview.jsx
 // Content of src/components/FormPreview.jsx:
-import renderField from "../../functions/RenderElements"
+import PreviewRenderer from "../../Functions/previewRender";
+import { useState } from "react";
 
-export default function FormPreview ({ elements }) {
-    return (
-        <div className="space-y-6">
-            <h2 className="text-lg font-semibold mb-4">Form Preview</h2>
-            <div className="border rounded-md">
-                <form className="space-y-4 p-5">
-                    {elements.map((el) => (
-                    <div key={el.id}>{renderField(el, false)}</div> // canvas = false
-                    ))}
-                    <button className="w-full bg-black text-white rounded p-2">Submit</button>
-                </form>
-            </div>
-        </div>
-    )
+export default function FormPreview({ elements }) {
+  const [formData, setFormData] = useState({});
+
+  const handleFormDataChange = (id, value) => {
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Submitted Data:", formData);
+    // You can extend this to actually process the data
+  };
+
+  const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
+
+  const withLabelWrapper = (element, label, required) => (
+    <div className="flex flex-col gap-3">
+      <label className="block font-semibold text-sm text-gray-700">
+        {label} {required && <span style={{ color: 'red' }}>*</span>}
+      </label>
+      {element}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold mb-4">Form Preview</h2>
+      <div className="border rounded-md">
+        <form className="space-y-4 p-5" onSubmit={handleSubmit}>
+          <PreviewRenderer
+            elements={elements}
+            formData={formData}
+            onChange={handleFormDataChange}
+            withLabelWrapper={withLabelWrapper}
+            commonInputClass={commonInputClass}
+          />
+          <button className="w-full bg-black text-white rounded p-2">Submit</button>
+        </form>
+      </div>
+    </div>
+  );
 }
+
 
 src/components/ImportModal.jsx
 // Content of src/components/ImportModal.jsx:
@@ -409,38 +540,61 @@ export default function ImportModal({ onClose, onImport }) {
 
 src/components/LogicPanel.jsx
 // Content of src/components/LogicPanel.jsx:
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-export default function LogicPanel({ elements, setElements }) {
+export default function LogicPanel({ elements, setElements, selectedElementId }) {
+  const selectedElement = elements.find(el => el.id === selectedElementId);
   const [rules, setRules] = useState([]);
 
-  const handleAddRule = () => {
-    setRules((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        whenFieldId: '',
-        operator: 'equals',
-        value: '',
-        action: 'show'
-      }
-    ]);
-  };
+  useEffect(() => {
+    // Load rules from selected element when it changes
+    if (selectedElement) {
+      setRules(selectedElement.visibilityRules || []);
+    }
+  }, [selectedElementId]);
 
-  const handleRemoveRule = (id) => {
-    setRules((prev) => prev.filter(rule => rule.id !== id));
-  };
-
-  const handleRuleChange = (id, key, value) => {
-    setRules(prev =>
-      prev.map(rule =>
-        rule.id === id ? { ...rule, [key]: value } : rule
+  const updateElementRules = (updatedRules) => {
+    setElements(prev =>
+      prev.map(el =>
+        el.id === selectedElementId
+          ? { ...el, visibilityRules: updatedRules }
+          : el
       )
     );
   };
 
+  const handleAddRule = () => {
+    const newRule = {
+      id: Date.now(),
+      whenFieldId: '',
+      operator: 'equals',
+      value: '',
+      action: 'show'
+    };
+
+    const updatedRules = [...rules, newRule];
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
+  const handleRemoveRule = (id) => {
+    const updatedRules = rules.filter(rule => rule.id !== id);
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
+  const handleRuleChange = (id, key, value) => {
+    const updatedRules = rules.map(rule =>
+      rule.id === id ? { ...rule, [key]: value } : rule
+    );
+    setRules(updatedRules);
+    updateElementRules(updatedRules);
+  };
+
   const hasEnoughFields = elements.length > 1;
+
+  const otherFields = elements.filter(el => el.id !== selectedElementId);
 
   return (
     <div className="space-y-4">
@@ -467,12 +621,16 @@ export default function LogicPanel({ elements, setElements }) {
             key={rule.id}
             className="border rounded-lg p-4 space-y-3 bg-gray-50 relative"
           >
-            <div className="absolute right-3 top-3 cursor-pointer" onClick={() => handleRemoveRule(rule.id)}>
+            <div
+              className="absolute right-3 top-3 cursor-pointer"
+              onClick={() => handleRemoveRule(rule.id)}
+            >
               <Trash2 className="w-4 h-4 text-gray-400 hover:text-black" />
             </div>
 
             <h3 className="font-semibold text-sm">Rule {index + 1}</h3>
 
+            {/* When Field */}
             <div>
               <label className="block text-sm mb-1">When field</label>
               <select
@@ -481,12 +639,13 @@ export default function LogicPanel({ elements, setElements }) {
                 onChange={(e) => handleRuleChange(rule.id, 'whenFieldId', e.target.value)}
               >
                 <option value="">Select field</option>
-                {elements.map(el => (
+                {otherFields.map(el => (
                   <option key={el.id} value={el.id}>{el.label}</option>
                 ))}
               </select>
             </div>
 
+            {/* Operator */}
             <div>
               <label className="block text-sm mb-1">Operator</label>
               <select
@@ -495,10 +654,16 @@ export default function LogicPanel({ elements, setElements }) {
                 onChange={(e) => handleRuleChange(rule.id, 'operator', e.target.value)}
               >
                 <option value="equals">Equals</option>
-                <option value="not-equals">Not equals</option>
+                <option value="not_equals">Not equals</option>
+                <option value="greater_than">Greater than</option>
+                <option value="less_than">Less than</option>
+                <option value="contains">Contains</option>
+                <option value="is_empty">Is empty</option>
+                <option value="is_not_empty">Is not empty</option>
               </select>
             </div>
 
+            {/* Value */}
             <div>
               <label className="block text-sm mb-1">Value</label>
               <input
@@ -509,6 +674,7 @@ export default function LogicPanel({ elements, setElements }) {
               />
             </div>
 
+            {/* Action */}
             <div>
               <label className="block text-sm mb-1">Action</label>
               <select
