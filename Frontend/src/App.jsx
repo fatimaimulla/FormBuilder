@@ -8,6 +8,7 @@ import FormPreview from './components/FormPreview'
 import LogicPanel from './components/LogicPanel'
 import ImportModal from './components/ImportModal'
 import { useEffect, useState } from 'react'
+import LandingPage from './components/LandingPage'
 
 function App() {
   const [elements, setElements] = useState([])
@@ -59,6 +60,7 @@ function App() {
   }
 
   return (
+    
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
         <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} />

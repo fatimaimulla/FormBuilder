@@ -142,6 +142,27 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 {el.description && <p className="text-gray-500">{el.description}</p>}
               </div>
             );
+        case "radio":
+            return (
+                <div key={el.id} className="flex flex-col gap-2">
+                <label className="font-semibold text-sm text-gray-700">
+                    {el.label} {el.required && <span style={{ color: 'red' }}>*</span>}
+                </label>
+                {el.options?.map((opt, i) => (
+                    <label key={i} className="inline-flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name={`radio-${el.id}`} // ensures grouped radios
+                        value={opt.value}
+                        checked={formData[el.id] === opt.value}
+                        onChange={(e) => onChange(el.id, e.target.value)}
+                    />
+                    <span className="p-1">{opt.label}</span>
+                    </label>
+                ))}
+                </div>
+            );
+        
           default:
             return <div key={el.id} className="text-gray-400 italic">Unknown field</div>;
         }

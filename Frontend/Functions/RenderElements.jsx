@@ -56,7 +56,7 @@ export default function renderField(field, canvas = true)
                   value={opt.value}
                   disabled={canvas}
                 />
-                <span>{opt.label}</span>
+                <span className="p-2">{opt.label}</span>
                 </label><br />
                 </>
             ))}
