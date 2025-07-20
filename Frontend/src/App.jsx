@@ -7,8 +7,8 @@ import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
 import LogicPanel from './components/LogicPanel'
 import ImportModal from './components/ImportModal'
+import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
-import LandingPage from './components/LandingPage'
 
 function App() {
   const [elements, setElements] = useState([])
@@ -16,6 +16,8 @@ function App() {
   const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
   const [mode, setMode] = useState("config");
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+
 
 
   function handleDragStart(event) {
@@ -63,7 +65,7 @@ function App() {
     
     <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
       <div className="h-screen flex flex-col">
-        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} />
+        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} onPublishClick={() => setShowPublishModal(true)} />
         <div className="flex flex-col md:flex-row flex-1 overflow-auto">
           <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
             <Sidebar />
@@ -94,6 +96,9 @@ function App() {
             setSelectedElementId(null);
           }}
         />
+      )}
+      {showPublishModal && (
+        <PublishModal onClose={() => setShowPublishModal(false)} elements={elements} />
       )}
       <DragOverlay>
         {activeDragItem ? (

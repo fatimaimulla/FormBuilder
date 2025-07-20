@@ -1,0 +1,77 @@
+import { useEffect, useState } from "react";
+import PreviewRenderer from "../Functions/previewRender";
+
+export default function SharedForm() {
+  const [elements, setElements] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const formParam = query.get("form");
+
+    if (formParam) {
+      try {
+        const decoded = decodeURIComponent(formParam);
+        const parsed = JSON.parse(decoded);
+        setElements(parsed);
+      } catch (e) {
+        console.error("Invalid form data in URL");
+        setError("Invalid or corrupted form data.");
+      }
+    } else {
+      setError("No form data found in the URL.");
+    }
+  }, []);
+
+  const handleChange = (id, value) => {
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Form submitted:", formData);
+    alert("Form submitted successfully! (Check console for data)");
+  };
+
+  const commonInputClass = "border px-4 py-2 rounded w-full bg-white text-sm";
+  const withLabelWrapper = (el, label, required) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {el}
+    </div>
+  );
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-red-600 text-lg font-medium">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 className="text-2xl font-bold mb-6">Shared Form</h1>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <PreviewRenderer
+            elements={elements}
+            formData={formData}
+            onChange={handleChange}
+            commonInputClass={commonInputClass}
+            withLabelWrapper={withLabelWrapper}
+          />
+          <button
+            type="submit"
+            className="w-full bg-black text-white py-2 rounded hover:bg-gray-900"
+          >
+            Submit
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
