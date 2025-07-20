@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import PreviewRenderer from "../Functions/previewRender";
+import PreviewRenderer from "../../Functions/previewRender";
 
 export default function SharedForm() {
   const [elements, setElements] = useState([]);
@@ -12,13 +12,20 @@ export default function SharedForm() {
 
     if (formParam) {
       try {
-        const decoded = decodeURIComponent(formParam);
-        const parsed = JSON.parse(decoded);
-        setElements(parsed);
-      } catch (e) {
-        console.error("Invalid form data in URL");
-        setError("Invalid or corrupted form data.");
-      }
+  let decoded = decodeURIComponent(formParam);
+
+  // Try double decoding if first decode still looks encoded
+  if (decoded.startsWith("%7B") || decoded.startsWith("%5B")) {
+    decoded = decodeURIComponent(decoded);
+  }
+
+  const parsed = JSON.parse(decoded);
+  setElements(parsed);
+} catch (e) {
+  console.error("Invalid form data in URL", e);
+  setError("Invalid or corrupted form data.");
+}
+
     } else {
       setError("No form data found in the URL.");
     }
