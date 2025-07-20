@@ -4,18 +4,22 @@ export default function ImportModal({ onClose, onImport }) {
   const [jsonData, setJsonData] = useState('');
 
   const handleImportClick = () => {
-    try {
-      const parsed = JSON.parse(jsonData);
-      if (Array.isArray(parsed.fields)) {
-        onImport(parsed.fields);  // ✅ pass only fields
-        onClose();
-      } else {
-        alert("Invalid format. 'fields' should be an array.");
-      }
-    } catch (e) {
-      alert("Invalid JSON format.");
+  try {
+    const parsed = JSON.parse(jsonData);
+    
+    // Allow direct array OR { fields: [...] }
+    const fields = Array.isArray(parsed) ? parsed : parsed.fields;
+
+    if (Array.isArray(fields)) {
+      onImport(fields);
+      onClose();
+    } else {
+      alert("Invalid format. Expecting an array of fields.");
     }
-  };
+  } catch (e) {
+    alert("Invalid JSON format.");
+  }
+};
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
@@ -47,3 +51,4 @@ export default function ImportModal({ onClose, onImport }) {
     </div>
   );
 }
+
