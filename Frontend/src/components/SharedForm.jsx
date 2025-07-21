@@ -62,8 +62,7 @@ export default function SharedForm() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
-        <h1 className="text-2xl font-bold mb-6">Shared Form</h1>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-9" onSubmit={handleSubmit}>
           <PreviewRenderer
             elements={elements}
             formData={formData}
@@ -71,12 +70,18 @@ export default function SharedForm() {
             commonInputClass={commonInputClass}
             withLabelWrapper={withLabelWrapper}
           />
-          <button
-            type="submit"
-            className="w-full bg-black text-white py-2 rounded hover:bg-gray-900"
-          >
-            Submit
-          </button>
+          <div className="flex gap-5">
+            <button
+              type="reset"
+              className="flex-1 bg-white text-black py-2 rounded border border-gray-300 hover:bg-gray-100">
+              Reset
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-black text-white py-2 rounded hover:bg-gray-700">
+              Submit
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import QRCode from "react-qr-code";
-import { ClipboardCopy, ExternalLink } from "lucide-react"; // use any icons you like
+import { ClipboardCopy, ExternalLink, Check } from "lucide-react"; 
 
 export default function PublishModal({ onClose, elements }) {
   const [tab, setTab] = useState("link");
+  const [copied, setCopied] = useState(false); 
+
   const [formLink, setFormLink] = useState(() => {
     const data = encodeURIComponent(JSON.stringify(elements));
     return `${window.location.origin}/shared?form=${data}`;
@@ -11,7 +13,8 @@ export default function PublishModal({ onClose, elements }) {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(formLink);
-    alert("Link copied to clipboard");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500); 
   };
 
   const handleOpen = () => {
@@ -60,7 +63,11 @@ export default function PublishModal({ onClose, elements }) {
                 className="p-2 border rounded hover:bg-gray-200"
                 title="Copy link"
               >
-                <ClipboardCopy className="w-4 h-4" />
+                {copied ? (
+                  <Check className="w-4 h-4 text-black" />
+                ) : (
+                  <ClipboardCopy className="w-4 h-4" />
+                )}
               </button>
               <button
                 onClick={handleOpen}

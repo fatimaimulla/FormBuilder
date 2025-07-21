@@ -1,5 +1,5 @@
 import './App.css'
-import { DndContext , DragOverlay } from '@dnd-kit/core'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
@@ -11,36 +11,38 @@ import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
 
 function App() {
-  const [elements, setElements] = useState([])
+  const [elements, setElements] = useState([
+    {
+      id: 1753076598430,
+      type: "section",
+      label: "New Form",
+      visibilityRules: []
+    }
+  ]);
   const [activeDragItem, setActiveDragItem] = useState(null)
-  const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
-  const [mode, setMode] = useState("config");
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showPublishModal, setShowPublishModal] = useState(false);
-
-
+  const [selectedElementId, setSelectedElementId] = useState(null)
+  const [mode, setMode] = useState("config")
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
-    //console.log(event.active.data.current)
   }
 
-  useEffect(() =>
-  {
-    console.log(elements);
-  },[elements])
+  useEffect(() => {
+    console.log(elements)
+  }, [elements])
 
   const handleDelete = (idToDelete) => {
-    setElements(prev => prev.filter(el => el.id !== idToDelete));
-    
-  };
-  
+    setElements(prev => prev.filter(el => el.id !== idToDelete))
+  }
+
   function handleDragEnd(event) {
-    const { over, active } = event;
+    const { over, active } = event
     if (over && over.id === 'canvas-dropzone') {
-      const type = active.data.current?.type; // ✅ declare first!
-      const label = active.data.current?.label || "New Field";
-      const firstWord = label.toLowerCase().split(" ")[0];
+      const type = active.data.current?.type
+      const label = active.data.current?.label || "New Field"
+      const firstWord = label.toLowerCase().split(" ")[0]
 
       const newField = {
         id: Date.now(),
@@ -53,33 +55,53 @@ function App() {
           ? [{ label: "Option 1", value: "option-1" }]
           : undefined,
         visibilityRules: [],
-      };
+      }
 
-      setElements((prev) => [...prev, newField]);
-      setSelectedElementId(newField.id);
+      setElements((prev) => [...prev, newField])
+      setSelectedElementId(newField.id)
     }
-    setActiveDragItem(null);
+    setActiveDragItem(null)
   }
 
   return (
-    
-    <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="h-screen flex flex-col">
-        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} onPublishClick={() => setShowPublishModal(true)} />
-        <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-          <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <CustomNavbar
+          mode={mode}
+          setMode={setMode}
+          elements={elements}
+          setElements={setElements}
+          onImportClick={() => setShowImportModal(true)}
+          onPublishClick={() => setShowPublishModal(true)}
+        />
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="w-[20%] bg-white border px-6 py-4 overflow-hidden">
             <Sidebar />
           </div>
-          <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
-            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
+
+          {/* Canvas */}
+          <div className={`transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
+            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId} />
           </div>
-           {elements.length > 0 && (
-            <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
+
+          {/* Config Panel */}
+          {elements.length > 0 && (
+            <div className="w-[23%] bg-white p-4 overflow-y-auto border">
               {mode === 'config' && (
-                <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
+                <FieldConfigPanel
+                  elements={elements}
+                  selectedElementId={selectedElementId}
+                  setElements={setElements}
+                />
               )}
               {mode === 'logic' && (
-                <LogicPanel elements={elements} setElements={setElements} selectedElementId={selectedElementId} />
+                <LogicPanel
+                  elements={elements}
+                  setElements={setElements}
+                  selectedElementId={selectedElementId}
+                />
               )}
               {mode === 'preview' && (
                 <FormPreview elements={elements} />
@@ -88,18 +110,24 @@ function App() {
           )}
         </div>
       </div>
+
       {showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
           onImport={(importedFields) => {
-            setElements(importedFields);
-            setSelectedElementId(null);
+            setElements(importedFields)
+            setSelectedElementId(null)
           }}
         />
       )}
+
       {showPublishModal && (
-        <PublishModal onClose={() => setShowPublishModal(false)} elements={elements} />
+        <PublishModal
+          onClose={() => setShowPublishModal(false)}
+          elements={elements}
+        />
       )}
+
       <DragOverlay>
         {activeDragItem ? (
           <div className="p-2 px-4 rounded border bg-white shadow-lg text-sm font-medium text-gray-800">
