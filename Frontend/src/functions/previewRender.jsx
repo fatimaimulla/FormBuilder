@@ -165,16 +165,17 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
 
           case "checkbox":
             return (
-              <label key={el.id} className="inline-flex items-center space-x-3">
+              <div key={el.id} className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={formData[el.id] || false}
                   onChange={(e) => handleChange(e, el)}
+                  className="w-4 h-4"
                 />
-                <span>
-                  {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
-                </span>
-              </label>
+                <label className="text-sm text-black">
+                  {el.label} {el.required && <span className="text-red-500">*</span>}
+                </label>
+              </div>
             );
 
           case "file":
