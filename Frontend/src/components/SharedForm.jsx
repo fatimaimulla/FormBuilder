@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import PreviewRenderer from "../../Functions/previewRender";
+import PreviewRenderer from "../functions/previewRender";
 
 export default function SharedForm() {
   const [elements, setElements] = useState([]);
