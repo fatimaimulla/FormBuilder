@@ -6,32 +6,33 @@
 ├── package.json
 ├── postcss.config.js
 ├── tailwind.config.js
+├── vercel.json
 ├── vite.config.js
-├── Functions
-│   ├── RenderElements.jsx
-│   └── previewRender.jsx
 └── src
     ├── App.css
     ├── App.jsx
     ├── index.css
     ├── main.jsx
-    └── components
-        ├── Canvas.jsx
-        ├── FieldConfigPanel.jsx
-        ├── FormPreview.jsx
-        ├── ImportModal.jsx
-        ├── LandingPage.jsx
-        ├── LogicPanel.jsx
-        ├── Navbar.jsx
-        ├── PublishModal.jsx
-        ├── SharedForm.jsx
-        ├── Sidebar.jsx
-        └── FieldConfigPanel
-            ├── CheckboxConfig.jsx
-            ├── DateConfig.jsx
-            ├── FileConfig.jsx
-            ├── NumberConfig.jsx
-            ├── RadioConfig.jsx
-            ├── SectionConfig.jsx
-            ├── SelectConfig.jsx
-            └── TextConfig.jsx
+    ├── components
+    │   ├── Canvas.jsx
+    │   ├── FieldConfigPanel.jsx
+    │   ├── FormPreview.jsx
+    │   ├── ImportModal.jsx
+    │   ├── LandingPage.jsx
+    │   ├── LogicPanel.jsx
+    │   ├── Navbar.jsx
+    │   ├── PublishModal.jsx
+    │   ├── SharedForm.jsx
+    │   ├── Sidebar.jsx
+    │   └── FieldConfigPanel
+    │       ├── CheckboxConfig.jsx
+    │       ├── DateConfig.jsx
+    │       ├── FileConfig.jsx
+    │       ├── NumberConfig.jsx
+    │       ├── RadioConfig.jsx
+    │       ├── SectionConfig.jsx
+    │       ├── SelectConfig.jsx
+    │       └── TextConfig.jsx
+    └── functions
+        ├── RenderElements.jsx
+        └── previewRender.jsx

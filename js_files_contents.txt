@@ -1,344 +1,12 @@
 JavaScript files in ./Frontend:
 
-Functions/RenderElements.jsx
-// Content of Functions/RenderElements.jsx:
-
-
-export default function renderField(field, canvas = true)
-{
-  
-  const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
-  
-  const withLabelWrapper = (element) => (
-    <div className="flex flex-col gap-3">
-      <label className="block font-semibold text-sm text-gray-700">{field.label} {field.required && <span style={{ color: 'red' }}>*</span>
-}</label> 
-      {element}
-    
-    </div>
-  );
-
-  switch (field.type) {
-    case "text":
-      return withLabelWrapper(<input type="text" placeholder={field.placeholder || "Enter text..."} className={commonInputClass} disabled={canvas} />);
-    case "number":
-      return withLabelWrapper(<input type="number" placeholder="Enter number..." className={commonInputClass} disabled={canvas}/>);
-    case "select":
-      return withLabelWrapper(
-        <select className={commonInputClass} defaultValue="" disabled={canvas}>
-
-          <option value="" disabled hidden>Select an option...</option>
-         {field.options?.map((opt, index) => (
-    <option key={index} value={opt.value}>
-      {opt.label}
-    </option>
-  ))}
-          
-        </select>
-      );
-    case "file":
-      return withLabelWrapper(<input type="file" className="w-full" disabled={canvas}/>);
-    case "date":
-      return withLabelWrapper(<input type="date" className={commonInputClass} disabled={canvas}/>);
-    case "checkbox":
-      return (
-        <label className="inline-flex items-center space-x-3">
-          <input type="checkbox" disabled={canvas}/>
-          <span>{" "+field.label} {field.required && <span style={{ color: 'red' }}>*</span>
-        }</span>
-        </label>
-      );
-      case "radio":
-        return withLabelWrapper(
-          <div className="space-y-2">
-            {field.options?.map((opt, index) => (
-              <>
-              <label key={index} className="inline-flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name={`radio-${field.id}`} // ensures grouped radios
-                  value={opt.value}
-                  disabled={canvas}
-                />
-                <span className="p-2">{opt.label}</span>
-                </label><br />
-                </>
-            ))}
-          </div>
-        );
-    case "section":
-      return <div className="">
-        <h3 className="text-lg font-bold">{field.label}</h3>
-        <p className="text-gray-500">{field.description}</p> 
-      </div>;
-    default:
-      return <div className="text-gray-400 italic">Unknown field</div>;
-  }
-}
-
-Functions/previewRender.jsx
-// Content of Functions/previewRender.jsx:
-import React, { useState } from "react";
-
-const commonInputClass =
-  "border rounded px-4 py-2 w-full bg-white text-sm";
-
-const withLabelWrapper = (element, label, required, error) => (
-  <div className="flex flex-col gap-1">
-    <label className="block font-semibold text-sm text-gray-700">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    {element}
-    {error && (
-      <span className="text-sm text-red-500 mt-1">{error}</span>
-    )}
-  </div>
-);
-
-const evaluateVisibility = (element, formData, elements) => {
-  if (!element || !element.visibilityRules || element.visibilityRules.length === 0) return true;
-
-  return element.visibilityRules.every((rule) => {
-    const targetValue = formData[rule.whenFieldId];
-    const expectedValue = rule.value;
-
-    switch (rule.operator) {
-      case "equals":
-        return rule.action === "show"
-          ? targetValue === expectedValue
-          : targetValue !== expectedValue;
-      case "not_equals":
-        return rule.action === "show"
-          ? targetValue !== expectedValue
-          : targetValue === expectedValue;
-      case "greater_than":
-        return rule.action === "show"
-          ? parseFloat(targetValue) > parseFloat(expectedValue)
-          : parseFloat(targetValue) <= parseFloat(expectedValue);
-      case "less_than":
-        return rule.action === "show"
-          ? parseFloat(targetValue) < parseFloat(expectedValue)
-          : parseFloat(targetValue) >= parseFloat(expectedValue);
-      case "contains":
-        return rule.action === "show"
-          ? (targetValue || "").includes(expectedValue)
-          : !(targetValue || "").includes(expectedValue);
-      case "is_empty":
-        return rule.action === "show"
-          ? !targetValue || targetValue === ""
-          : targetValue && targetValue !== "";
-      case "is_not_empty":
-        return rule.action === "show"
-          ? targetValue && targetValue !== ""
-          : !targetValue || targetValue === "";
-      default:
-        return true;
-    }
-  });
-};
-
-const PreviewRenderer = ({ elements, formData, onChange }) => {
-  const [errors, setErrors] = useState({});
-
-  const handleBlur = (el, value) => {
-    let error = "";
-
-    // Pattern validation
-    if (el.pattern) {
-      try {
-        const regex = new RegExp(el.pattern);
-        if (regex.test(value)) {
-          error ="";
-        }
-        else
-        {
-            error =  el.patternError || "Invalid format.";
-        }
-      } catch {
-        // Invalid regex should be ignored
-      }
-    }
-
-    // Min/max length for text
-    if (el.type === "text") {
-      if (el.minLength && value.length < parseInt(el.minLength)) {
-        error = `Minimum ${el.minLength} characters required.`;
-      }
-      if (el.maxLength && value.length > parseInt(el.maxLength)) {
-        error = `Maximum ${el.maxLength} characters allowed.`;
-      }
-    }
-
-    // Min/max value for number
-    if (el.type === "number" && value !== "") {
-      const numVal = parseFloat(value);
-      if (el.minLength && numVal < parseFloat(el.minLength)) {
-        error = `Minimum value is ${el.minLength}.`;
-      }
-      if (el.maxLength && numVal > parseFloat(el.maxLength)) {
-        error = `Maximum value is ${el.maxLength}.`;
-      }
-    }
-
-    setErrors((prev) => ({ ...prev, [el.id]: error }));
-  };
-
-  return (
-    <div className="space-y-4">
-      {elements.map((el) => {
-        if (!el) return null;
-        const isVisible = evaluateVisibility(el, formData, elements);
-        if (!isVisible) return null;
-
-        const handleChange = (e) => {
-          const value =
-            e.target.type === "checkbox" ? e.target.checked : e.target.value;
-          onChange(el.id, value);
-        };
-
-        switch (el.type) {
-          case "text":
-            return withLabelWrapper(
-              <input
-                key={el.id}
-                type="text"
-                value={formData[el.id] || ""}
-                placeholder={el.placeholder || "Enter text..."}
-                onChange={handleChange}
-                onBlur={(e) => handleBlur(el, e.target.value)}
-                className={commonInputClass}
-              />,
-              el.label,
-              el.required,
-              errors[el.id]
-            );
-
-          case "number":
-            return withLabelWrapper(
-              <input
-                key={el.id}
-                type="number"
-                value={formData[el.id] || ""}
-                placeholder={el.placeholder || "Enter number..."}
-                onChange={handleChange}
-                onBlur={(e) => handleBlur(el, e.target.value)}
-                className={commonInputClass}
-              />,
-              el.label,
-              el.required,
-              errors[el.id]
-            );
-
-          case "select":
-            return withLabelWrapper(
-              <select
-                key={el.id}
-                value={formData[el.id] || ""}
-                onChange={handleChange}
-                className={commonInputClass}
-              >
-                <option value="" disabled hidden>
-                  Select an option...
-                </option>
-                {el.options?.map((opt, i) => (
-                  <option key={i} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>,
-              el.label,
-              el.required
-            );
-
-          case "checkbox":
-            return (
-              <label key={el.id} className="inline-flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  checked={formData[el.id] || false}
-                  onChange={handleChange}
-                />
-                <span>
-                  {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
-                </span>
-              </label>
-            );
-
-          case "file":
-            return withLabelWrapper(
-              <input
-                key={el.id}
-                type="file"
-                onChange={handleChange}
-                className="w-full"
-              />,
-              el.label,
-              el.required
-            );
-
-          case "date":
-            return withLabelWrapper(
-              <input
-                key={el.id}
-                type="date"
-                value={formData[el.id] || ""}
-                onChange={handleChange}
-                className={commonInputClass}
-              />,
-              el.label,
-              el.required
-            );
-
-          case "section":
-            return (
-              <div key={el.id}>
-                <h3 className="text-lg font-bold">{el.label}</h3>
-                {el.description && <p className="text-gray-500">{el.description}</p>}
-              </div>
-            );
-
-          case "radio":
-            return (
-              <div key={el.id} className="flex flex-col gap-2">
-                <label className="font-semibold text-sm text-gray-700">
-                  {el.label} {el.required && <span className="text-red-500">*</span>}
-                </label>
-                {el.options?.map((opt, i) => (
-                  <label key={i} className="inline-flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name={`radio-${el.id}`}
-                      value={opt.value}
-                      checked={formData[el.id] === opt.value}
-                      onChange={(e) => onChange(el.id, e.target.value)}
-                    />
-                    <span className="p-1">{opt.label}</span>
-                  </label>
-                ))}
-              </div>
-            );
-
-          default:
-            return (
-              <div key={el.id} className="text-gray-400 italic">
-                Unknown field
-              </div>
-            );
-        }
-      })}
-    </div>
-  );
-};
-
-export default PreviewRenderer;
-
-
 src/App.jsx
 // Content of src/App.jsx:
 import './App.css'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
+import axios from 'axios'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
@@ -347,7 +15,20 @@ import ImportModal from './components/ImportModal'
 import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
 
-function App() {
+function App()
+{
+   useEffect(() => {
+    const wakeUpServer = async () => {
+      try {
+        await axios.get('https://formb-tk0d.onrender.com');
+        console.log('🎉 Backend is awake!');
+      } catch (error) {
+        console.error('❌ Failed to wake backend:', error);
+      }
+    };
+
+    wakeUpServer();
+  }, []);
   const [elements, setElements] = useState([
     {
       id: 1753076598430,
@@ -361,10 +42,14 @@ function App() {
   const [mode, setMode] = useState("config")
   const [showImportModal, setShowImportModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
+  const [forceShowPanel, setForceShowPanel] = useState(false)
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
   }
+  useEffect(() => {
+    
+  }, [])
 
   useEffect(() => {
     console.log(elements)
@@ -396,9 +81,13 @@ function App() {
 
       setElements((prev) => [...prev, newField])
       setSelectedElementId(newField.id)
+      setForceShowPanel(true)
     }
     setActiveDragItem(null)
   }
+
+  const isOnlySectionPresent = elements.length === 1 && elements[0].type === "section";
+  const shouldShowPanel = !isOnlySectionPresent || forceShowPanel;
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -410,6 +99,7 @@ function App() {
           setElements={setElements}
           onImportClick={() => setShowImportModal(true)}
           onPublishClick={() => setShowPublishModal(true)}
+          showViewButtons={shouldShowPanel}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -419,12 +109,19 @@ function App() {
           </div>
 
           {/* Canvas */}
-          <div className={`transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
-            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId} />
+          <div className={`transition-all duration-300 ${shouldShowPanel ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
+            <Canvas
+              elements={elements}
+              handleDelete={handleDelete}
+              onElementSelect={(id) => {
+                setSelectedElementId(id);
+                setForceShowPanel(true);
+              }}
+            />
           </div>
 
           {/* Config Panel */}
-          {elements.length > 0 && (
+          {shouldShowPanel && (
             <div className="w-[23%] bg-white p-4 overflow-y-auto border">
               {mode === 'config' && (
                 <FieldConfigPanel
@@ -454,6 +151,7 @@ function App() {
           onImport={(importedFields) => {
             setElements(importedFields)
             setSelectedElementId(null)
+            setForceShowPanel(true)
           }}
         />
       )}
@@ -495,7 +193,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/build-forms" element={<App />} />
-        <Route path="/shared" element={<SharedForm />} />
+        <Route path="/forms/shared" element={<SharedForm />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
@@ -505,7 +203,7 @@ createRoot(document.getElementById('root')).render(
 src/components/Canvas.jsx
 // Content of src/components/Canvas.jsx:
 import { useDroppable } from '@dnd-kit/core';
-import renderField from '../../functions/RenderElements';
+import renderField from '../functions/RenderElements';
 import { Trash2, Grip  } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -580,7 +278,10 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
     setElements(updated);
   };
 
-  if (!selectedElement) {
+  if(elements.length===0){
+    return <div className="text-gray-400 italic">No elements in the Form. Please Add one.</div>;
+  }
+  else if (!selectedElement ) {
     return <div className="text-gray-400 italic">Click a field to configure it</div>;
   }
 
@@ -640,7 +341,7 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
 
 src/components/FormPreview.jsx
 // Content of src/components/FormPreview.jsx:
-import PreviewRenderer from "../../Functions/previewRender";
+import PreviewRenderer from "../functions/previewRender";
 import { useState } from "react";
 
 export default function FormPreview({ elements }) {
@@ -965,77 +666,70 @@ src/components/Navbar.jsx
 // Content of src/components/Navbar.jsx:
 import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles, Share2 } from 'lucide-react';
 
-export default function CustomNavbar({ mode, setMode ,elements, setElements, onImportClick, onPublishClick })
-{
+export default function CustomNavbar({ mode, setMode, elements, setElements, onImportClick, onPublishClick, showViewButtons }) {
   let hasElements = elements.length > 0;
-  
+
   const handleExport = () => {
-  const formData = {
-    fields: elements,
+    const formData = {
+      fields: elements,
+    };
+
+    const jsonString = JSON.stringify(formData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "form-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
   };
-
-  const jsonString = JSON.stringify(formData, null, 2);
-  const blob = new Blob([jsonString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "form-data.json";
-  a.click();
-  URL.revokeObjectURL(url);
-};
 
   return (
     <header className="bg-white text-black px-6 py-4 flex justify-between items-center shadow-md h-20">
-      {/* Left: Project Name + Undo/Redo */}
+      {/* Left: Project Name */}
       <div className="flex items-center space-x-5">
         <h1 className="text-2xl font-bold">Form Builder</h1>
       </div>
 
-      {/* Right: Import/Export */}
+      {/* Right Controls */}
       <div className="flex items-center space-x-5">
-        {hasElements && (
+        {showViewButtons && (
           <div className='flex items-center space-x-0 h-10 bg-gray-100 py-1 px-1 rounded'>
             <button
               onClick={() => setMode('config')}
-              className={`flex items-center gap-2 px-2 py-2 rounded h-8 ${
-                mode === 'config' ? 'bg-white text-balck' : 'bg-gray-100 text-gray-600'
-              }`}>
+              className={`flex items-center gap-2 px-2 py-2 rounded h-8 ${mode === 'config' ? 'bg-white text-black' : 'bg-gray-100 text-gray-600'}`}>
               <Settings className="w-4 h-4" /> Configure
             </button>
 
             <button
               onClick={() => setMode('logic')}
-              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${
-                mode === 'logic' ? 'bg-white text-balck' : 'bg-gray-100 text-gray-600'
-              }`}>
+              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${mode === 'logic' ? 'bg-white text-black' : 'bg-gray-100 text-gray-600'}`}>
               <WandSparkles className='w-4 h-4' /> Logic
             </button>
 
             <button
               onClick={() => setMode('preview')}
-              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${
-                mode === 'preview' ? 'bg-white text-black' : 'bg-gray-100 text-gray-600'
-              }`}>
+              className={`flex items-center gap-2 px-3 py-2 rounded h-8 ${mode === 'preview' ? 'bg-white text-black' : 'bg-gray-100 text-gray-600'}`}>
               <Eye className="w-4 h-4" /> Preview
             </button>
           </div>
         )}
 
         <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={onImportClick}>
-          <Upload className='w-4 h-4'/>Import
+          <Upload className='w-4 h-4' />Import
         </button>
         <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded border" onClick={handleExport}>
-          <Download className='w-4 h-4'/>Export
+          <Download className='w-4 h-4' />Export
         </button>
         <button
           className={`flex items-center gap-3 px-4 py-2 rounded border ${
-            elements.length === 0
+            elements.length === 0 || (elements.length === 1 && elements[0].type === "section")
               ? "bg-gray-200 text-gray-400 cursor-not-allowed"
               : "bg-black text-white"
           }`}
-          onClick={elements.length > 0 ? onPublishClick : null}
-          disabled={elements.length === 0}>
+          onClick={elements.length > 1 ? onPublishClick : null}
+          disabled={elements.length === 0 || (elements.length === 1 && elements[0].type === "section")}>
           <Share2 className="w-4 h-4" />Publish
         </button>
       </div>
@@ -1046,23 +740,46 @@ export default function CustomNavbar({ mode, setMode ,elements, setElements, onI
 
 src/components/PublishModal.jsx
 // Content of src/components/PublishModal.jsx:
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
-import { ClipboardCopy, ExternalLink, Check } from "lucide-react"; 
+import { ClipboardCopy, ExternalLink, Check } from "lucide-react";
 
 export default function PublishModal({ onClose, elements }) {
   const [tab, setTab] = useState("link");
-  const [copied, setCopied] = useState(false); 
+  const [copied, setCopied] = useState(false);
+  const [formLink, setFormLink] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [formLink, setFormLink] = useState(() => {
-    const data = encodeURIComponent(JSON.stringify(elements));
-    return `${window.location.origin}/shared?form=${data}`;
-  });
+  useEffect(() => {
+    const publishForm = async () => {
+      try {
+        const res = await fetch("https://formb-tk0d.onrender.com/forms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(elements),
+        });
+
+        const data = await res.json();
+        if (data.id) {
+          const link = `${window.location.origin}/shared?form=${data.id}`;
+          setFormLink(link);
+        } else {
+          console.error("No ID returned from backend");
+        }
+      } catch (err) {
+        console.error("Error publishing form:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    publishForm();
+  }, [elements]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(formLink);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500); 
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleOpen = () => {
@@ -1081,20 +798,30 @@ export default function PublishModal({ onClose, elements }) {
         <div className="flex border rounded overflow-hidden w-full">
           <button
             onClick={() => setTab("link")}
-            className={`w-1/2 py-2 text-sm font-medium ${tab === "link" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+            className={`w-1/2 py-2 text-sm font-medium ${
+              tab === "link"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             Share Link
           </button>
           <button
             onClick={() => setTab("qr")}
-            className={`w-1/2 py-2 text-sm font-medium ${tab === "qr" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+            className={`w-1/2 py-2 text-sm font-medium ${
+              tab === "qr"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             QR Code
           </button>
         </div>
 
         {/* Content */}
-        {tab === "link" ? (
+        {loading ? (
+          <div className="text-center text-gray-500 text-sm">Publishing form...</div>
+        ) : tab === "link" ? (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Form URL
@@ -1155,7 +882,7 @@ export default function PublishModal({ onClose, elements }) {
 src/components/SharedForm.jsx
 // Content of src/components/SharedForm.jsx:
 import { useEffect, useState } from "react";
-import PreviewRenderer from "../../Functions/previewRender";
+import PreviewRenderer from "../functions/previewRender";
 
 export default function SharedForm() {
   const [elements, setElements] = useState([]);
@@ -1164,27 +891,29 @@ export default function SharedForm() {
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
-    const formParam = query.get("form");
+    const formId = query.get("form");
 
-    if (formParam) {
-      try {
-  let decoded = decodeURIComponent(formParam);
-
-  // Try double decoding if first decode still looks encoded
-  if (decoded.startsWith("%7B") || decoded.startsWith("%5B")) {
-    decoded = decodeURIComponent(decoded);
-  }
-
-  const parsed = JSON.parse(decoded);
-  setElements(parsed);
-} catch (e) {
-  console.error("Invalid form data in URL", e);
-  setError("Invalid or corrupted form data.");
-}
-
-    } else {
-      setError("No form data found in the URL.");
+    if (!formId) {
+      setError("No form ID found in the URL.");
+      return;
     }
+
+    const fetchForm = async () => {
+      try {
+        const res = await fetch(`https://formb-tk0d.onrender.com/forms/${formId}`);
+        if (!res.ok) {
+          throw new Error("Form not found");
+        }
+
+        const data = await res.json();
+        setElements(data.form); // Assuming backend sends { form: [...] }
+      } catch (err) {
+        console.error("Error fetching form:", err);
+        setError("Failed to load form. It might have been deleted or doesn't exist.");
+      }
+    };
+
+    fetchForm();
   }, []);
 
   const handleChange = (id, value) => {
@@ -1806,28 +1535,26 @@ export default function TextConfig({ field, updateField }) {
     setRegexInput(value);
     if (value.trim() === "") {
     setRegexError("");
-      updateField("pattern", "");
-      
-      updateField()
+    updateField("pattern", "");
     return;
-    }
+  }
 
-    // Optional: quick pre-check to avoid obviously invalid strings (optional safety layer)
-    const looksLikeRegex = value.length > 1 && /[.*+?|()[\]{}\\]/.test(value);
+  // Optional: quick pre-check to avoid obviously invalid strings (optional safety layer)
+  const looksLikeRegex = value.length > 1 && /[.*+?|()[\]{}\\]/.test(value);
 
-    if (!looksLikeRegex) {
-      setRegexError("This doesn't look like a regular expression.");
-      return;
-    }
+  if (!looksLikeRegex) {
+    setRegexError("This doesn't look like a regular expression.");
+    return;
+  }
 
-    try {
-      new RegExp(value); // Try compiling it
-      setRegexError(""); // Clear error if valid
-      updateField("pattern", value); // Save only if valid
-    } catch (e) {
-      setRegexError("Invalid regular expression syntax.");
-    }
-  };
+  try {
+    new RegExp(value); // Try compiling it
+    setRegexError(""); // Clear error if valid
+    updateField("pattern", value); // Save only if valid
+  } catch (e) {
+    setRegexError("Invalid regular expression syntax.");
+  }
+};
 
 
   return (
@@ -1922,5 +1649,331 @@ export default function TextConfig({ field, updateField }) {
     </div>
   );
 }
+
+
+src/functions/RenderElements.jsx
+// Content of src/functions/RenderElements.jsx:
+
+
+export default function renderField(field, canvas = true)
+{
+  
+  const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
+  
+  const withLabelWrapper = (element) => (
+    <div className="flex flex-col gap-3">
+      <label className="block font-semibold text-sm text-gray-700">{field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+}</label> 
+      {element}
+    
+    </div>
+  );
+
+  switch (field.type) {
+    case "text":
+      return withLabelWrapper(<input type="text" placeholder={field.placeholder || "Enter text..."} className={commonInputClass} disabled={canvas} />);
+    case "number":
+      return withLabelWrapper(<input type="number" placeholder="Enter number..." className={commonInputClass} disabled={canvas}/>);
+    case "select":
+      return withLabelWrapper(
+        <select className={commonInputClass} defaultValue="" disabled={canvas}>
+
+          <option value="" disabled hidden>Select an option...</option>
+         {field.options?.map((opt, index) => (
+    <option key={index} value={opt.value}>
+      {opt.label}
+    </option>
+  ))}
+          
+        </select>
+      );
+    case "file":
+      return withLabelWrapper(<input type="file" className="w-full" disabled={canvas}/>);
+    case "date":
+      return withLabelWrapper(<input type="date" className={commonInputClass} disabled={canvas}/>);
+    case "checkbox":
+      return (
+        <label className="inline-flex items-center space-x-3">
+          <input type="checkbox" disabled={canvas}/>
+          <span>{" "+field.label} {field.required && <span style={{ color: 'red' }}>*</span>
+        }</span>
+        </label>
+      );
+      case "radio":
+        return withLabelWrapper(
+          <div className="space-y-2">
+            {field.options?.map((opt, index) => (
+              <>
+              <label key={index} className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name={`radio-${field.id}`} // ensures grouped radios
+                  value={opt.value}
+                  disabled={canvas}
+                />
+                <span className="p-2">{opt.label}</span>
+                </label><br />
+                </>
+            ))}
+          </div>
+        );
+    case "section":
+      return <div className="">
+        <h3 className="text-lg font-bold">{field.label}</h3>
+        <p className="text-gray-500">{field.description}</p> 
+      </div>;
+    default:
+      return <div className="text-gray-400 italic">Unknown field</div>;
+  }
+}
+
+src/functions/previewRender.jsx
+// Content of src/functions/previewRender.jsx:
+import React, { useState } from "react";
+
+const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
+
+const withLabelWrapper = (element, label, required, error) => (
+  <div className="flex flex-col gap-1">
+    <label className="block font-semibold text-sm text-gray-700">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {element}
+    {error && <span className="text-sm text-red-500 mt-1">{error}</span>}
+  </div>
+);
+
+const evaluateVisibility = (element, formData, elements) => {
+  if (!element || !element.visibilityRules || element.visibilityRules.length === 0) return true;
+
+  return element.visibilityRules.every((rule) => {
+    const targetValue = formData[rule.whenFieldId];
+    const expectedValue = rule.value;
+
+    switch (rule.operator) {
+      case "equals":
+        return rule.action === "show"
+          ? targetValue === expectedValue
+          : targetValue !== expectedValue;
+      case "not_equals":
+        return rule.action === "show"
+          ? targetValue !== expectedValue
+          : targetValue === expectedValue;
+      case "greater_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) > parseFloat(expectedValue)
+          : parseFloat(targetValue) <= parseFloat(expectedValue);
+      case "less_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) < parseFloat(expectedValue)
+          : parseFloat(targetValue) >= parseFloat(expectedValue);
+      case "contains":
+        return rule.action === "show"
+          ? (targetValue || "").includes(expectedValue)
+          : !(targetValue || "").includes(expectedValue);
+      case "is_empty":
+        return rule.action === "show"
+          ? !targetValue || targetValue === ""
+          : targetValue && targetValue !== "";
+      case "is_not_empty":
+        return rule.action === "show"
+          ? targetValue && targetValue !== ""
+          : !targetValue || targetValue === "";
+      default:
+        return true;
+    }
+  });
+};
+
+const PreviewRenderer = ({ elements, formData, onChange }) => {
+  const [errors, setErrors] = useState({});
+
+  const validateField = (el, value) => {
+    let error = "";
+
+    // Pattern validation
+    if (el.pattern) {
+      try {
+        const regex = new RegExp(el.pattern);
+        if (!regex.test(value)) {
+          error = el.patternError || "Invalid format.";
+        }
+      } catch {
+        // Ignore invalid regex
+      }
+    }
+
+    // Min/max length for text
+    if (el.type === "text") {
+      if (el.minLength && value.length < parseInt(el.minLength)) {
+        error = `Minimum ${el.minLength} characters required.`;
+      }
+      if (el.maxLength && value.length > parseInt(el.maxLength)) {
+        error = `Maximum ${el.maxLength} characters allowed.`;
+      }
+    }
+
+    // Min/max value for number
+    if (el.type === "number" && value !== "") {
+      const numVal = parseFloat(value);
+      if (el.minLength && numVal < parseFloat(el.minLength)) {
+        error = `Minimum value is ${el.minLength}.`;
+      }
+      if (el.maxLength && numVal > parseFloat(el.maxLength)) {
+        error = `Maximum value is ${el.maxLength}.`;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [el.id]: error }));
+  };
+
+  const handleChange = (e, el) => {
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    onChange(el.id, value);
+    validateField(el, value); // live validation
+  };
+
+  return (
+    <div className="space-y-4">
+      {elements.map((el) => {
+        if (!el) return null;
+        const isVisible = evaluateVisibility(el, formData, elements);
+        if (!isVisible) return null;
+
+        switch (el.type) {
+          case "text":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="text"
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter text..."}
+                onChange={(e) => handleChange(e, el)}
+                onBlur={(e) => validateField(el, e.target.value)}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
+            );
+
+          case "number":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="number"
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter number..."}
+                onChange={(e) => handleChange(e, el)}
+                onBlur={(e) => validateField(el, e.target.value)}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
+            );
+
+          case "select":
+            return withLabelWrapper(
+              <select
+                key={el.id}
+                value={formData[el.id] || ""}
+                onChange={(e) => handleChange(e, el)}
+                className={commonInputClass}
+              >
+                <option value="" disabled hidden>
+                  Select an option...
+                </option>
+                {el.options?.map((opt, i) => (
+                  <option key={i} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>,
+              el.label,
+              el.required
+            );
+
+          case "checkbox":
+            return (
+              <label key={el.id} className="inline-flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={formData[el.id] || false}
+                  onChange={(e) => handleChange(e, el)}
+                />
+                <span>
+                  {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
+                </span>
+              </label>
+            );
+
+          case "file":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="file"
+                onChange={(e) => handleChange(e, el)}
+                className="w-full"
+              />,
+              el.label,
+              el.required
+            );
+
+          case "date":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="date"
+                value={formData[el.id] || ""}
+                onChange={(e) => handleChange(e, el)}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required
+            );
+
+          case "section":
+            return (
+              <div key={el.id}>
+                <h3 className="text-lg font-bold">{el.label}</h3>
+                {el.description && <p className="text-gray-500">{el.description}</p>}
+              </div>
+            );
+
+          case "radio":
+            return (
+              <div key={el.id} className="flex flex-col gap-2">
+                <label className="font-semibold text-sm text-gray-700">
+                  {el.label} {el.required && <span className="text-red-500">*</span>}
+                </label>
+                {el.options?.map((opt, i) => (
+                  <label key={i} className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`radio-${el.id}`}
+                      value={opt.value}
+                      checked={formData[el.id] === opt.value}
+                      onChange={(e) => handleChange(e, el)}
+                    />
+                    <span className="p-1">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            );
+
+          default:
+            return (
+              <div key={el.id} className="text-gray-400 italic">
+                Unknown field
+              </div>
+            );
+        }
+      })}
+    </div>
+  );
+};
+
+export default PreviewRenderer;
 
 

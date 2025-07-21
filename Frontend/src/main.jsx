@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/build-forms" element={<App />} />
-        <Route path="/forms/shared" element={<SharedForm />} />
+        <Route path="/shared" element={<SharedForm />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
