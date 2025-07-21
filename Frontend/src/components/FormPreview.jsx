@@ -1,4 +1,4 @@
-import PreviewRenderer from "../../Functions/previewRender";
+import PreviewRenderer from "../functions/previewRender";
 import { useState } from "react";
 
 export default function FormPreview({ elements }) {
