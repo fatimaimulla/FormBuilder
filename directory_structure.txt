@@ -20,8 +20,11 @@
         ├── FieldConfigPanel.jsx
         ├── FormPreview.jsx
         ├── ImportModal.jsx
+        ├── LandingPage.jsx
         ├── LogicPanel.jsx
         ├── Navbar.jsx
+        ├── PublishModal.jsx
+        ├── SharedForm.jsx
         ├── Sidebar.jsx
         └── FieldConfigPanel
             ├── CheckboxConfig.jsx

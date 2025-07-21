@@ -1,20 +1,43 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
-import { ClipboardCopy, ExternalLink, Check } from "lucide-react"; 
+import { ClipboardCopy, ExternalLink, Check } from "lucide-react";
 
 export default function PublishModal({ onClose, elements }) {
   const [tab, setTab] = useState("link");
-  const [copied, setCopied] = useState(false); 
+  const [copied, setCopied] = useState(false);
+  const [formLink, setFormLink] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [formLink, setFormLink] = useState(() => {
-    const data = encodeURIComponent(JSON.stringify(elements));
-    return `${window.location.origin}/shared?form=${data}`;
-  });
+  useEffect(() => {
+    const publishForm = async () => {
+      try {
+        const res = await fetch("https://formb-tk0d.onrender.com/forms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(elements),
+        });
+
+        const data = await res.json();
+        if (data.id) {
+          const link = `${window.location.origin}/shared?form=${data.id}`;
+          setFormLink(link);
+        } else {
+          console.error("No ID returned from backend");
+        }
+      } catch (err) {
+        console.error("Error publishing form:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    publishForm();
+  }, [elements]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(formLink);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500); 
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleOpen = () => {
@@ -33,20 +56,30 @@ export default function PublishModal({ onClose, elements }) {
         <div className="flex border rounded overflow-hidden w-full">
           <button
             onClick={() => setTab("link")}
-            className={`w-1/2 py-2 text-sm font-medium ${tab === "link" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+            className={`w-1/2 py-2 text-sm font-medium ${
+              tab === "link"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             Share Link
           </button>
           <button
             onClick={() => setTab("qr")}
-            className={`w-1/2 py-2 text-sm font-medium ${tab === "qr" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+            className={`w-1/2 py-2 text-sm font-medium ${
+              tab === "qr"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             QR Code
           </button>
         </div>
 
         {/* Content */}
-        {tab === "link" ? (
+        {loading ? (
+          <div className="text-center text-gray-500 text-sm">Publishing form...</div>
+        ) : tab === "link" ? (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Form URL

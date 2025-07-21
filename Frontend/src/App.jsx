@@ -2,6 +2,7 @@ import './App.css'
 import { DndContext, DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
+import axios from 'axios'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
@@ -10,7 +11,20 @@ import ImportModal from './components/ImportModal'
 import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
 
-function App() {
+function App()
+{
+   useEffect(() => {
+    const wakeUpServer = async () => {
+      try {
+        await axios.get('https://formb-tk0d.onrender.com');
+        console.log('🎉 Backend is awake!');
+      } catch (error) {
+        console.error('❌ Failed to wake backend:', error);
+      }
+    };
+
+    wakeUpServer();
+  }, []);
   const [elements, setElements] = useState([
     {
       id: 1753076598430,
@@ -29,6 +43,9 @@ function App() {
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
   }
+  useEffect(() => {
+    
+  }, [])
 
   useEffect(() => {
     console.log(elements)

@@ -60,7 +60,7 @@ export default function renderField(field, canvas = true)
                   value={opt.value}
                   disabled={canvas}
                 />
-                <span>{opt.label}</span>
+                <span className="p-2">{opt.label}</span>
                 </label><br />
                 </>
             ))}
@@ -78,32 +78,111 @@ export default function renderField(field, canvas = true)
 
 Functions/previewRender.jsx
 // Content of Functions/previewRender.jsx:
-import React from 'react';
+import React, { useState } from "react";
 
-// 🧠 Logic evaluator for visibility based on formData and rules
+const commonInputClass =
+  "border rounded px-4 py-2 w-full bg-white text-sm";
+
+const withLabelWrapper = (element, label, required, error) => (
+  <div className="flex flex-col gap-1">
+    <label className="block font-semibold text-sm text-gray-700">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {element}
+    {error && (
+      <span className="text-sm text-red-500 mt-1">{error}</span>
+    )}
+  </div>
+);
+
 const evaluateVisibility = (element, formData, elements) => {
   if (!element || !element.visibilityRules || element.visibilityRules.length === 0) return true;
 
-  return element.visibilityRules.every(rule => {
+  return element.visibilityRules.every((rule) => {
     const targetValue = formData[rule.whenFieldId];
     const expectedValue = rule.value;
 
     switch (rule.operator) {
-      case 'equals':
-        return rule.action === 'show' ? targetValue === expectedValue : targetValue !== expectedValue;
-      case 'not_equals':
-        return rule.action === 'show' ? targetValue !== expectedValue : targetValue === expectedValue;
-        
+      case "equals":
+        return rule.action === "show"
+          ? targetValue === expectedValue
+          : targetValue !== expectedValue;
+      case "not_equals":
+        return rule.action === "show"
+          ? targetValue !== expectedValue
+          : targetValue === expectedValue;
+      case "greater_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) > parseFloat(expectedValue)
+          : parseFloat(targetValue) <= parseFloat(expectedValue);
+      case "less_than":
+        return rule.action === "show"
+          ? parseFloat(targetValue) < parseFloat(expectedValue)
+          : parseFloat(targetValue) >= parseFloat(expectedValue);
+      case "contains":
+        return rule.action === "show"
+          ? (targetValue || "").includes(expectedValue)
+          : !(targetValue || "").includes(expectedValue);
+      case "is_empty":
+        return rule.action === "show"
+          ? !targetValue || targetValue === ""
+          : targetValue && targetValue !== "";
+      case "is_not_empty":
+        return rule.action === "show"
+          ? targetValue && targetValue !== ""
+          : !targetValue || targetValue === "";
       default:
-            return true;
-    
+        return true;
     }
   });
 };
 
-
-// ✅ Clean preview renderer component
 const PreviewRenderer = ({ elements, formData, onChange }) => {
+  const [errors, setErrors] = useState({});
+
+  const handleBlur = (el, value) => {
+    let error = "";
+
+    // Pattern validation
+    if (el.pattern) {
+      try {
+        const regex = new RegExp(el.pattern);
+        if (regex.test(value)) {
+          error ="";
+        }
+        else
+        {
+            error =  el.patternError || "Invalid format.";
+        }
+      } catch {
+        // Invalid regex should be ignored
+      }
+    }
+
+    // Min/max length for text
+    if (el.type === "text") {
+      if (el.minLength && value.length < parseInt(el.minLength)) {
+        error = `Minimum ${el.minLength} characters required.`;
+      }
+      if (el.maxLength && value.length > parseInt(el.maxLength)) {
+        error = `Maximum ${el.maxLength} characters allowed.`;
+      }
+    }
+
+    // Min/max value for number
+    if (el.type === "number" && value !== "") {
+      const numVal = parseFloat(value);
+      if (el.minLength && numVal < parseFloat(el.minLength)) {
+        error = `Minimum value is ${el.minLength}.`;
+      }
+      if (el.maxLength && numVal > parseFloat(el.maxLength)) {
+        error = `Maximum value is ${el.maxLength}.`;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [el.id]: error }));
+  };
+
   return (
     <div className="space-y-4">
       {elements.map((el) => {
@@ -112,60 +191,139 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
         if (!isVisible) return null;
 
         const handleChange = (e) => {
-          const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+          const value =
+            e.target.type === "checkbox" ? e.target.checked : e.target.value;
           onChange(el.id, value);
         };
 
         switch (el.type) {
-          case 'text':
-            return (
+          case "text":
+            return withLabelWrapper(
               <input
                 key={el.id}
                 type="text"
-                value={formData[el.id] || ''}
-                placeholder={el.placeholder}
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter text..."}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
+                onBlur={(e) => handleBlur(el, e.target.value)}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
             );
-          case 'number':
-            return (
+
+          case "number":
+            return withLabelWrapper(
               <input
                 key={el.id}
                 type="number"
-                value={formData[el.id] || ''}
-                placeholder={el.placeholder}
+                value={formData[el.id] || ""}
+                placeholder={el.placeholder || "Enter number..."}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
+                onBlur={(e) => handleBlur(el, e.target.value)}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
             );
-          case 'select':
-            return (
+
+          case "select":
+            return withLabelWrapper(
               <select
                 key={el.id}
-                value={formData[el.id] || ''}
+                value={formData[el.id] || ""}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
+                className={commonInputClass}
               >
-                <option value="">Select</option>
+                <option value="" disabled hidden>
+                  Select an option...
+                </option>
                 {el.options?.map((opt, i) => (
-                  <option key={i} value={opt.value}>{opt.label}</option>
+                  <option key={i} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
-              </select>
+              </select>,
+              el.label,
+              el.required
             );
-          case 'checkbox':
+
+          case "checkbox":
             return (
-              <label key={el.id} className="flex items-center gap-2">
+              <label key={el.id} className="inline-flex items-center space-x-3">
                 <input
                   type="checkbox"
                   checked={formData[el.id] || false}
                   onChange={handleChange}
                 />
-                {el.label}
+                <span>
+                  {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
+                </span>
               </label>
             );
+
+          case "file":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="file"
+                onChange={handleChange}
+                className="w-full"
+              />,
+              el.label,
+              el.required
+            );
+
+          case "date":
+            return withLabelWrapper(
+              <input
+                key={el.id}
+                type="date"
+                value={formData[el.id] || ""}
+                onChange={handleChange}
+                className={commonInputClass}
+              />,
+              el.label,
+              el.required
+            );
+
+          case "section":
+            return (
+              <div key={el.id}>
+                <h3 className="text-lg font-bold">{el.label}</h3>
+                {el.description && <p className="text-gray-500">{el.description}</p>}
+              </div>
+            );
+
+          case "radio":
+            return (
+              <div key={el.id} className="flex flex-col gap-2">
+                <label className="font-semibold text-sm text-gray-700">
+                  {el.label} {el.required && <span className="text-red-500">*</span>}
+                </label>
+                {el.options?.map((opt, i) => (
+                  <label key={i} className="inline-flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`radio-${el.id}`}
+                      value={opt.value}
+                      checked={formData[el.id] === opt.value}
+                      onChange={(e) => onChange(el.id, e.target.value)}
+                    />
+                    <span className="p-1">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            );
+
           default:
-            return null;
+            return (
+              <div key={el.id} className="text-gray-400 italic">
+                Unknown field
+              </div>
+            );
         }
       })}
     </div>
@@ -178,7 +336,7 @@ export default PreviewRenderer;
 src/App.jsx
 // Content of src/App.jsx:
 import './App.css'
-import { DndContext , DragOverlay } from '@dnd-kit/core'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
@@ -186,37 +344,42 @@ import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
 import LogicPanel from './components/LogicPanel'
 import ImportModal from './components/ImportModal'
+import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
 
 function App() {
-  const [elements, setElements] = useState([])
+  const [elements, setElements] = useState([
+    {
+      id: 1753076598430,
+      type: "section",
+      label: "New Form",
+      visibilityRules: []
+    }
+  ]);
   const [activeDragItem, setActiveDragItem] = useState(null)
-  const [selectedElementId, setSelectedElementId] = useState(null); // currently selected element
-  const [mode, setMode] = useState("config");
-  const [showImportModal, setShowImportModal] = useState(false);
-
+  const [selectedElementId, setSelectedElementId] = useState(null)
+  const [mode, setMode] = useState("config")
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
-    //console.log(event.active.data.current)
   }
 
-  useEffect(() =>
-  {
-    console.log(elements);
-  },[elements])
+  useEffect(() => {
+    console.log(elements)
+  }, [elements])
 
   const handleDelete = (idToDelete) => {
-    setElements(prev => prev.filter(el => el.id !== idToDelete));
-    
-  };
-  
+    setElements(prev => prev.filter(el => el.id !== idToDelete))
+  }
+
   function handleDragEnd(event) {
-    const { over, active } = event;
+    const { over, active } = event
     if (over && over.id === 'canvas-dropzone') {
-      const type = active.data.current?.type; // ✅ declare first!
-      const label = active.data.current?.label || "New Field";
-      const firstWord = label.toLowerCase().split(" ")[0];
+      const type = active.data.current?.type
+      const label = active.data.current?.label || "New Field"
+      const firstWord = label.toLowerCase().split(" ")[0]
 
       const newField = {
         id: Date.now(),
@@ -229,32 +392,53 @@ function App() {
           ? [{ label: "Option 1", value: "option-1" }]
           : undefined,
         visibilityRules: [],
-      };
+      }
 
-      setElements((prev) => [...prev, newField]);
-      setSelectedElementId(newField.id);
+      setElements((prev) => [...prev, newField])
+      setSelectedElementId(newField.id)
     }
-    setActiveDragItem(null);
+    setActiveDragItem(null)
   }
 
   return (
-    <DndContext onDragStart={ handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="h-screen flex flex-col">
-        <CustomNavbar mode={mode} setMode={setMode}  elements={elements} setElements={setElements} onImportClick={() => setShowImportModal(true)} />
-        <div className="flex flex-col md:flex-row flex-1 overflow-auto">
-          <div className="px-6 md:w-[20%] w-full bg-white py-4 border">
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <CustomNavbar
+          mode={mode}
+          setMode={setMode}
+          elements={elements}
+          setElements={setElements}
+          onImportClick={() => setShowImportModal(true)}
+          onPublishClick={() => setShowPublishModal(true)}
+        />
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="w-[20%] bg-white border px-6 py-4 overflow-hidden">
             <Sidebar />
           </div>
-          <div className={`bg-white border transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'}`}>
-            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId}/>
+
+          {/* Canvas */}
+          <div className={`transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
+            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId} />
           </div>
-           {elements.length > 0 && (
-            <div className="px-6 w-[23%] bg-white p-4 border transition-all duration-300">
+
+          {/* Config Panel */}
+          {elements.length > 0 && (
+            <div className="w-[23%] bg-white p-4 overflow-y-auto border">
               {mode === 'config' && (
-                <FieldConfigPanel elements={elements} selectedElementId={selectedElementId} setElements={setElements} />
+                <FieldConfigPanel
+                  elements={elements}
+                  selectedElementId={selectedElementId}
+                  setElements={setElements}
+                />
               )}
               {mode === 'logic' && (
-                <LogicPanel elements={elements} setElements={setElements} selectedElementId={selectedElementId} />
+                <LogicPanel
+                  elements={elements}
+                  setElements={setElements}
+                  selectedElementId={selectedElementId}
+                />
               )}
               {mode === 'preview' && (
                 <FormPreview elements={elements} />
@@ -263,15 +447,24 @@ function App() {
           )}
         </div>
       </div>
+
       {showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
           onImport={(importedFields) => {
-            setElements(importedFields);
-            setSelectedElementId(null);
+            setElements(importedFields)
+            setSelectedElementId(null)
           }}
         />
       )}
+
+      {showPublishModal && (
+        <PublishModal
+          onClose={() => setShowPublishModal(false)}
+          elements={elements}
+        />
+      )}
+
       <DragOverlay>
         {activeDragItem ? (
           <div className="p-2 px-4 rounded border bg-white shadow-lg text-sm font-medium text-gray-800">
@@ -288,16 +481,25 @@ export default App
 
 src/main.jsx
 // Content of src/main.jsx:
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './index.css';
+import App from './App.jsx';
+import SharedForm from './components/SharedForm.jsx';
+import LandingPage from './components/LandingPage.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/build-forms" element={<App />} />
+        <Route path="/shared" element={<SharedForm />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
-)
+);
 
 
 src/components/Canvas.jsx
@@ -493,18 +695,22 @@ export default function ImportModal({ onClose, onImport }) {
   const [jsonData, setJsonData] = useState('');
 
   const handleImportClick = () => {
-    try {
-      const parsed = JSON.parse(jsonData);
-      if (Array.isArray(parsed.fields)) {
-        onImport(parsed.fields);  // ✅ pass only fields
-        onClose();
-      } else {
-        alert("Invalid format. 'fields' should be an array.");
-      }
-    } catch (e) {
-      alert("Invalid JSON format.");
+  try {
+    const parsed = JSON.parse(jsonData);
+    
+    // Allow direct array OR { fields: [...] }
+    const fields = Array.isArray(parsed) ? parsed : parsed.fields;
+
+    if (Array.isArray(fields)) {
+      onImport(fields);
+      onClose();
+    } else {
+      alert("Invalid format. Expecting an array of fields.");
     }
-  };
+  } catch (e) {
+    alert("Invalid JSON format.");
+  }
+};
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
@@ -538,6 +744,45 @@ export default function ImportModal({ onClose, onImport }) {
 }
 
 
+
+src/components/LandingPage.jsx
+// Content of src/components/LandingPage.jsx:
+import { useNavigate } from "react-router-dom";
+import { ArrowRight } from 'lucide-react';
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+
+  const handleStartClick = () => {
+    navigate("/build-forms");
+  };
+
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center text-center px-4">
+      <div className="flex-col space-y-7 animate-fadeInSlow">
+        <h1 className="text-6xl md:text-5xl font-bold text-gray-900 leading-tight">
+          Build Forms{" "}
+          <span className="italic underline underline-offset-4 decoration-gray-400">
+            Visually
+          </span>
+          {" "}
+          & Effortlessly
+        </h1>
+      
+        <p className="text-xl text-black">Drag. Drop. Configure.</p>
+        <p className="text-lg text-black">Your Form-building experience, Redefined.</p>
+
+        <button
+          onClick={handleStartClick}
+          className="bg-black text-white px-7 py-2.5 rounded hover:bg-gray-700 transition duration-300">
+          <span className="flex gap-3"> Start Building <ArrowRight/> </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 src/components/LogicPanel.jsx
 // Content of src/components/LogicPanel.jsx:
 import { useEffect, useState } from "react";
@@ -545,8 +790,17 @@ import { Plus, Trash2 } from "lucide-react";
 
 export default function LogicPanel({ elements, setElements, selectedElementId }) {
   const selectedElement = elements.find(el => el.id === selectedElementId);
+  
+  const [showValue, setShowValue] = useState(null);
   const [rules, setRules] = useState([]);
+  const [selectedOperator, setSelectedOperator] = useState("Equals");
 
+  useEffect(() => {
+    setShowValue(!["is_empty", "is_not_empty"].includes(selectedOperator));
+    console.log(selectedOperator);
+  }, [selectedOperator]);
+  
+  
   useEffect(() => {
     // Load rules from selected element when it changes
     if (selectedElement) {
@@ -588,8 +842,10 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
     const updatedRules = rules.map(rule =>
       rule.id === id ? { ...rule, [key]: value } : rule
     );
+    setSelectedOperator(value);
     setRules(updatedRules);
     updateElementRules(updatedRules);
+    //console.log(value);
   };
 
   const hasEnoughFields = elements.length > 1;
@@ -650,7 +906,7 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
               <label className="block text-sm mb-1">Operator</label>
               <select
                 className="w-full border px-3 py-2 rounded"
-                value={rule.operator}
+                value={selectedOperator}
                 onChange={(e) => handleRuleChange(rule.id, 'operator', e.target.value)}
               >
                 <option value="equals">Equals</option>
@@ -664,7 +920,7 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
             </div>
 
             {/* Value */}
-            <div>
+            {showValue&&(<div>
               <label className="block text-sm mb-1">Value</label>
               <input
                 type="text"
@@ -672,9 +928,11 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
                 value={rule.value}
                 onChange={(e) => handleRuleChange(rule.id, 'value', e.target.value)}
               />
-            </div>
+            </div>)}
+            
 
             {/* Action */}
+            
             <div>
               <label className="block text-sm mb-1">Action</label>
               <select
@@ -705,9 +963,9 @@ export default function LogicPanel({ elements, setElements, selectedElementId })
 
 src/components/Navbar.jsx
 // Content of src/components/Navbar.jsx:
-import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles } from 'lucide-react';
+import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles, Share2 } from 'lucide-react';
 
-export default function CustomNavbar({ mode, setMode ,elements, setElements, onImportClick })
+export default function CustomNavbar({ mode, setMode ,elements, setElements, onImportClick, onPublishClick })
 {
   let hasElements = elements.length > 0;
   
@@ -727,24 +985,11 @@ export default function CustomNavbar({ mode, setMode ,elements, setElements, onI
   URL.revokeObjectURL(url);
 };
 
-
-  const handleImport = () =>
-  {
-    
-  }
   return (
     <header className="bg-white text-black px-6 py-4 flex justify-between items-center shadow-md h-20">
       {/* Left: Project Name + Undo/Redo */}
       <div className="flex items-center space-x-5">
         <h1 className="text-2xl font-bold">Form Builder</h1>
-        <div className='flex items-center space-x-3'>
-          <button className="bg-white text-black px-2 py-2 rounded border border-gray-100">
-            <Undo className='w-5 h-5 text-gray-400'/> 
-          </button>
-          <button className="bg-white text-black px-2 py-2 rounded border border-gray-100">
-            <Redo className='w-5 h-5 text-gray-400'/>
-          </button>
-        </div>
       </div>
 
       {/* Right: Import/Export */}
@@ -780,11 +1025,222 @@ export default function CustomNavbar({ mode, setMode ,elements, setElements, onI
         <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={onImportClick}>
           <Upload className='w-4 h-4'/>Import
         </button>
-        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded" onClick={handleExport}>
+        <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded border" onClick={handleExport}>
           <Download className='w-4 h-4'/>Export
+        </button>
+        <button
+          className={`flex items-center gap-3 px-4 py-2 rounded border ${
+            elements.length === 0
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-black text-white"
+          }`}
+          onClick={elements.length > 0 ? onPublishClick : null}
+          disabled={elements.length === 0}>
+          <Share2 className="w-4 h-4" />Publish
         </button>
       </div>
     </header>
+  );
+}
+
+
+src/components/PublishModal.jsx
+// Content of src/components/PublishModal.jsx:
+import React, { useState } from "react";
+import QRCode from "react-qr-code";
+import { ClipboardCopy, ExternalLink, Check } from "lucide-react"; 
+
+export default function PublishModal({ onClose, elements }) {
+  const [tab, setTab] = useState("link");
+  const [copied, setCopied] = useState(false); 
+
+  const [formLink, setFormLink] = useState(() => {
+    const data = encodeURIComponent(JSON.stringify(elements));
+    return `${window.location.origin}/shared?form=${data}`;
+  });
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(formLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500); 
+  };
+
+  const handleOpen = () => {
+    window.open(formLink, "_blank");
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 space-y-6 relative">
+        <h2 className="text-xl font-semibold">Publish Your Form</h2>
+        <p className="text-sm text-gray-500">
+          Make your form available to collect responses from users.
+        </p>
+
+        {/* Tabs */}
+        <div className="flex border rounded overflow-hidden w-full">
+          <button
+            onClick={() => setTab("link")}
+            className={`w-1/2 py-2 text-sm font-medium ${tab === "link" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+          >
+            Share Link
+          </button>
+          <button
+            onClick={() => setTab("qr")}
+            className={`w-1/2 py-2 text-sm font-medium ${tab === "qr" ? "bg-black text-white" : "bg-white text-gray-700"}`}
+          >
+            QR Code
+          </button>
+        </div>
+
+        {/* Content */}
+        {tab === "link" ? (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Form URL
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={formLink}
+                readOnly
+                className="flex-1 border px-3 py-2 rounded text-sm bg-gray-100"
+              />
+              <button
+                onClick={handleCopy}
+                className="p-2 border rounded hover:bg-gray-200"
+                title="Copy link"
+              >
+                {copied ? (
+                  <Check className="w-4 h-4 text-black" />
+                ) : (
+                  <ClipboardCopy className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={handleOpen}
+                className="p-2 border rounded hover:bg-gray-200"
+                title="Open link"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">
+              Share this link with anyone you want to collect responses from.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center space-y-3 pt-2">
+            <QRCode value={formLink} size={160} />
+            <p className="text-sm text-gray-500">
+              Scan this QR code to access the form on mobile devices.
+            </p>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4">
+          <button
+            onClick={onClose}
+            className="text-sm text-gray-600 hover:underline"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+src/components/SharedForm.jsx
+// Content of src/components/SharedForm.jsx:
+import { useEffect, useState } from "react";
+import PreviewRenderer from "../../Functions/previewRender";
+
+export default function SharedForm() {
+  const [elements, setElements] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const formParam = query.get("form");
+
+    if (formParam) {
+      try {
+  let decoded = decodeURIComponent(formParam);
+
+  // Try double decoding if first decode still looks encoded
+  if (decoded.startsWith("%7B") || decoded.startsWith("%5B")) {
+    decoded = decodeURIComponent(decoded);
+  }
+
+  const parsed = JSON.parse(decoded);
+  setElements(parsed);
+} catch (e) {
+  console.error("Invalid form data in URL", e);
+  setError("Invalid or corrupted form data.");
+}
+
+    } else {
+      setError("No form data found in the URL.");
+    }
+  }, []);
+
+  const handleChange = (id, value) => {
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Form submitted:", formData);
+    alert("Form submitted successfully! (Check console for data)");
+  };
+
+  const commonInputClass = "border px-4 py-2 rounded w-full bg-white text-sm";
+  const withLabelWrapper = (el, label, required) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {el}
+    </div>
+  );
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-red-600 text-lg font-medium">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
+        <form className="space-y-9" onSubmit={handleSubmit}>
+          <PreviewRenderer
+            elements={elements}
+            formData={formData}
+            onChange={handleChange}
+            commonInputClass={commonInputClass}
+            withLabelWrapper={withLabelWrapper}
+          />
+          <div className="flex gap-5">
+            <button
+              type="reset"
+              className="flex-1 bg-white text-black py-2 rounded border border-gray-300 hover:bg-gray-100">
+              Reset
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-black text-white py-2 rounded hover:bg-gray-700">
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -960,12 +1416,38 @@ export default function FileConfig({ field, updateField }) {
 
 src/components/FieldConfigPanel/NumberConfig.jsx
 // Content of src/components/FieldConfigPanel/NumberConfig.jsx:
+import { useState } from "react";
+
 export default function NumberConfig({ field, updateField }) {
-    return (
-        <div className="space-y-5">
+  const [regexInput, setRegexInput] = useState(field.pattern || "");
+  const [regexError, setRegexError] = useState("");
 
-      
+  const handleRegexChange = (value) => {
+    setRegexInput(value);
+    if (value.trim() === "") {
+    setRegexError("");
+    updateField("pattern", "");
+    return;
+  }
 
+    const looksLikeRegex = value.length > 1 && /[.*+?|()[\]{}\\]/.test(value);
+
+    if (!looksLikeRegex) {
+      setRegexError("This doesn't look like a valid number regex.");
+      return;
+    }
+
+    try {
+      new RegExp(value); // Try compiling it
+      setRegexError("");
+      updateField("pattern", value); // Save only if valid
+    } catch (e) {
+      setRegexError("Invalid regular expression syntax.");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
       {/* Placeholder */}
       <div>
         <label className="block text-md font-medium mb-1">Placeholder</label>
@@ -980,49 +1462,85 @@ export default function NumberConfig({ field, updateField }) {
       {/* Required */}
       <div className="flex items-center justify-start gap-2">
         <button
-            type="button"
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-            field.required ? 'bg-black' : 'bg-gray-300'
-            }`}
-            onClick={() => updateField("required", !field.required)}
+          type="button"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? "bg-black" : "bg-gray-300"
+          }`}
+          onClick={() => updateField("required", !field.required)}
         >
-            <span
+          <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                field.required ? 'translate-x-6' : 'translate-x-1'
+              field.required ? "translate-x-6" : "translate-x-1"
             }`}
-            />
+          />
         </button>
         <label className="text-md font-medium">Required field</label>
       </div>
 
       <div className="flex flex-row justify-between gap-4">
-        {/* Min Length */}
+        {/* Min Value */}
         <div className="flex-1">
-            <label className="block text-md font-medium mb-1">Min Length</label>
-            <input
+          <label className="block text-md font-medium mb-1">Min Value</label>
+          <input
             type="number"
             value={field.minLength || ""}
             onChange={(e) => updateField("minLength", e.target.value)}
             className="w-full border px-3 py-2 rounded"
             min={0}
-            />
+          />
         </div>
 
-        {/* Max Length */}
+        {/* Max Value */}
         <div className="flex-1">
-            <label className="block text-md font-medium mb-1">Max Length</label>
-            <input
+          <label className="block text-md font-medium mb-1">Max Value</label>
+          <input
             type="number"
             value={field.maxLength || ""}
             onChange={(e) => updateField("maxLength", e.target.value)}
             className="w-full border px-3 py-2 rounded"
             min={0}
-            />
+          />
         </div>
       </div>
+
+      {/* Validation Pattern (Regex) */}
+      <div>
+        <label className="block text-md font-medium mb-1">
+          Validation Pattern (Regex)
+        </label>
+        <input
+          type="text"
+          value={regexInput}
+          onChange={(e) => handleRegexChange(e.target.value)}
+          className={`w-full border px-3 py-2 rounded ${
+            regexError ? "border-red-500" : ""
+          }`}
+          placeholder="e.g. ^[0-9]+$"
+        />
+        {regexError && (
+          <p className="text-red-500 text-sm mt-1">{regexError}</p>
+        )}
+
+        {/* Custom Error Message */}
+    {!regexError && regexInput.trim() !== "" && (
+      <div className="mt-3">
+        <label className="block text-md font-medium mb-1">
+          Custom Error Message
+        </label>
+        <input
+          type="text"
+          value={field.patternError || ""}
+          onChange={(e) => updateField("patternError", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          placeholder="e.g. Only numbers are allowed"
+        />
+      </div>
+    )}
+      </div>
     </div>
-    )
+  );
 }
+
 
 src/components/FieldConfigPanel/RadioConfig.jsx
 // Content of src/components/FieldConfigPanel/RadioConfig.jsx:
@@ -1274,7 +1792,44 @@ export default function SelectConfig({ field, updateField }) {
 
 src/components/FieldConfigPanel/TextConfig.jsx
 // Content of src/components/FieldConfigPanel/TextConfig.jsx:
+import { useState, useEffect } from "react";
+
 export default function TextConfig({ field, updateField }) {
+  const [regexInput, setRegexInput] = useState(field.pattern || "");
+  const [regexError, setRegexError] = useState("");
+
+  useEffect(() => {
+    setRegexInput(field.pattern || "");
+  }, [field.pattern]);
+
+  const handleRegexChange = (value) => {
+    setRegexInput(value);
+    if (value.trim() === "") {
+    setRegexError("");
+      updateField("pattern", "");
+      
+      updateField()
+    return;
+    }
+
+    // Optional: quick pre-check to avoid obviously invalid strings (optional safety layer)
+    const looksLikeRegex = value.length > 1 && /[.*+?|()[\]{}\\]/.test(value);
+
+    if (!looksLikeRegex) {
+      setRegexError("This doesn't look like a regular expression.");
+      return;
+    }
+
+    try {
+      new RegExp(value); // Try compiling it
+      setRegexError(""); // Clear error if valid
+      updateField("pattern", value); // Save only if valid
+    } catch (e) {
+      setRegexError("Invalid regular expression syntax.");
+    }
+  };
+
+
   return (
     <div className="space-y-5">
 
@@ -1292,60 +1847,78 @@ export default function TextConfig({ field, updateField }) {
       {/* Required */}
       <div className="flex items-center justify-start gap-2">
         <button
-            type="button"
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-            field.required ? 'bg-black' : 'bg-gray-300'
-            }`}
-            onClick={() => updateField("required", !field.required)}
+          type="button"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+            field.required ? "bg-black" : "bg-gray-300"
+          }`}
+          onClick={() => updateField("required", !field.required)}
         >
-            <span
+          <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                field.required ? 'translate-x-6' : 'translate-x-1'
+              field.required ? "translate-x-6" : "translate-x-1"
             }`}
-            />
+          />
         </button>
         <label className="text-md font-medium">Required field</label>
       </div>
 
+      {/* Min & Max Length */}
       <div className="flex flex-row justify-between gap-4">
-        {/* Min Length */}
         <div className="flex-1">
-            <label className="block text-md font-medium mb-1">Min Length</label>
-            <input
+          <label className="block text-md font-medium mb-1">Min Length</label>
+          <input
             type="number"
             value={field.minLength || ""}
             onChange={(e) => updateField("minLength", e.target.value)}
             className="w-full border px-3 py-2 rounded"
             min={0}
-            />
+          />
         </div>
 
-        {/* Max Length */}
         <div className="flex-1">
-            <label className="block text-md font-medium mb-1">Max Length</label>
-            <input
+          <label className="block text-md font-medium mb-1">Max Length</label>
+          <input
             type="number"
             value={field.maxLength || ""}
             onChange={(e) => updateField("maxLength", e.target.value)}
             className="w-full border px-3 py-2 rounded"
             min={0}
-            />
+          />
         </div>
       </div>
 
-      {/* Validation Pattern */}
+      {/* Regex Pattern */}
       <div>
         <label className="block text-md font-medium mb-1">
           Validation Pattern (Regex)
         </label>
         <input
           type="text"
-          value={field.pattern || ""}
-          onChange={(e) => updateField("pattern", e.target.value)}
+          value={regexInput}
+          onChange={(e) => handleRegexChange(e.target.value)}
           className="w-full border px-3 py-2 rounded"
           placeholder="e.g. ^[a-zA-Z]+$"
         />
+        {regexError && (
+          <p className="text-sm text-red-600 mt-1">{regexError}</p>
+        )}
       </div>
+
+      {/* custom error */}
+      {!regexError && regexInput.trim() !== "" && (
+        <div className="mt-3">
+          <label className="block text-md font-medium mb-1">
+            Custom Error Message
+          </label>
+          <input
+            type="text"
+            value={field.patternError || ""}
+            onChange={(e) => updateField("patternError", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            placeholder="e.g. Enter Valid Email.."
+          />
+        </div>
+      )}
     </div>
   );
 }

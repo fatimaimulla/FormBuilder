@@ -8,27 +8,29 @@ export default function SharedForm() {
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
-    const formParam = query.get("form");
+    const formId = query.get("form");
 
-    if (formParam) {
-      try {
-  let decoded = decodeURIComponent(formParam);
-
-  // Try double decoding if first decode still looks encoded
-  if (decoded.startsWith("%7B") || decoded.startsWith("%5B")) {
-    decoded = decodeURIComponent(decoded);
-  }
-
-  const parsed = JSON.parse(decoded);
-  setElements(parsed);
-} catch (e) {
-  console.error("Invalid form data in URL", e);
-  setError("Invalid or corrupted form data.");
-}
-
-    } else {
-      setError("No form data found in the URL.");
+    if (!formId) {
+      setError("No form ID found in the URL.");
+      return;
     }
+
+    const fetchForm = async () => {
+      try {
+        const res = await fetch(`https://formb-tk0d.onrender.com/forms/${formId}`);
+        if (!res.ok) {
+          throw new Error("Form not found");
+        }
+
+        const data = await res.json();
+        setElements(data.form); // Assuming backend sends { form: [...] }
+      } catch (err) {
+        console.error("Error fetching form:", err);
+        setError("Failed to load form. It might have been deleted or doesn't exist.");
+      }
+    };
+
+    fetchForm();
   }, []);
 
   const handleChange = (id, value) => {
