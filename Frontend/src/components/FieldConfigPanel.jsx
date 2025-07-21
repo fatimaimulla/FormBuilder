@@ -17,7 +17,10 @@ export default function FieldConfigPanel({ elements, selectedElementId, setEleme
     setElements(updated);
   };
 
-  if (!selectedElement) {
+  if(elements.length===0){
+    return <div className="text-gray-400 italic">No elements in the Form. Please Add one.</div>;
+  }
+  else if (!selectedElement ) {
     return <div className="text-gray-400 italic">Click a field to configure it</div>;
   }
 

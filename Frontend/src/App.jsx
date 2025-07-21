@@ -24,6 +24,7 @@ function App() {
   const [mode, setMode] = useState("config")
   const [showImportModal, setShowImportModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
+  const [forceShowPanel, setForceShowPanel] = useState(false)
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -59,9 +60,13 @@ function App() {
 
       setElements((prev) => [...prev, newField])
       setSelectedElementId(newField.id)
+      setForceShowPanel(true)
     }
     setActiveDragItem(null)
   }
+
+  const isOnlySectionPresent = elements.length === 1 && elements[0].type === "section";
+  const shouldShowPanel = !isOnlySectionPresent || forceShowPanel;
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -73,6 +78,7 @@ function App() {
           setElements={setElements}
           onImportClick={() => setShowImportModal(true)}
           onPublishClick={() => setShowPublishModal(true)}
+          showViewButtons={shouldShowPanel}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -82,12 +88,19 @@ function App() {
           </div>
 
           {/* Canvas */}
-          <div className={`transition-all duration-300 ${elements.length > 0 ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
-            <Canvas elements={elements} handleDelete={handleDelete} onElementSelect={setSelectedElementId} />
+          <div className={`transition-all duration-300 ${shouldShowPanel ? 'w-[57%]' : 'flex-grow'} border bg-white overflow-y-auto`}>
+            <Canvas
+              elements={elements}
+              handleDelete={handleDelete}
+              onElementSelect={(id) => {
+                setSelectedElementId(id);
+                setForceShowPanel(true);
+              }}
+            />
           </div>
 
           {/* Config Panel */}
-          {elements.length > 0 && (
+          {shouldShowPanel && (
             <div className="w-[23%] bg-white p-4 overflow-y-auto border">
               {mode === 'config' && (
                 <FieldConfigPanel
@@ -117,6 +130,7 @@ function App() {
           onImport={(importedFields) => {
             setElements(importedFields)
             setSelectedElementId(null)
+            setForceShowPanel(true)
           }}
         />
       )}

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 
-const commonInputClass =
-  "border rounded px-4 py-2 w-full bg-white text-sm";
+const commonInputClass = "border rounded px-4 py-2 w-full bg-white text-sm";
 
 const withLabelWrapper = (element, label, required, error) => (
   <div className="flex flex-col gap-1">
@@ -9,9 +8,7 @@ const withLabelWrapper = (element, label, required, error) => (
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     {element}
-    {error && (
-      <span className="text-sm text-red-500 mt-1">{error}</span>
-    )}
+    {error && <span className="text-sm text-red-500 mt-1">{error}</span>}
   </div>
 );
 
@@ -60,22 +57,18 @@ const evaluateVisibility = (element, formData, elements) => {
 const PreviewRenderer = ({ elements, formData, onChange }) => {
   const [errors, setErrors] = useState({});
 
-  const handleBlur = (el, value) => {
+  const validateField = (el, value) => {
     let error = "";
 
     // Pattern validation
     if (el.pattern) {
       try {
         const regex = new RegExp(el.pattern);
-        if (regex.test(value)) {
-          error ="";
-        }
-        else
-        {
-            error =  el.patternError || "Invalid format.";
+        if (!regex.test(value)) {
+          error = el.patternError || "Invalid format.";
         }
       } catch {
-        // Invalid regex should be ignored
+        // Ignore invalid regex
       }
     }
 
@@ -103,18 +96,18 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
     setErrors((prev) => ({ ...prev, [el.id]: error }));
   };
 
+  const handleChange = (e, el) => {
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    onChange(el.id, value);
+    validateField(el, value); // live validation
+  };
+
   return (
     <div className="space-y-4">
       {elements.map((el) => {
         if (!el) return null;
         const isVisible = evaluateVisibility(el, formData, elements);
         if (!isVisible) return null;
-
-        const handleChange = (e) => {
-          const value =
-            e.target.type === "checkbox" ? e.target.checked : e.target.value;
-          onChange(el.id, value);
-        };
 
         switch (el.type) {
           case "text":
@@ -124,8 +117,8 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 type="text"
                 value={formData[el.id] || ""}
                 placeholder={el.placeholder || "Enter text..."}
-                onChange={handleChange}
-                onBlur={(e) => handleBlur(el, e.target.value)}
+                onChange={(e) => handleChange(e, el)}
+                onBlur={(e) => validateField(el, e.target.value)}
                 className={commonInputClass}
               />,
               el.label,
@@ -140,8 +133,8 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 type="number"
                 value={formData[el.id] || ""}
                 placeholder={el.placeholder || "Enter number..."}
-                onChange={handleChange}
-                onBlur={(e) => handleBlur(el, e.target.value)}
+                onChange={(e) => handleChange(e, el)}
+                onBlur={(e) => validateField(el, e.target.value)}
                 className={commonInputClass}
               />,
               el.label,
@@ -154,7 +147,7 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
               <select
                 key={el.id}
                 value={formData[el.id] || ""}
-                onChange={handleChange}
+                onChange={(e) => handleChange(e, el)}
                 className={commonInputClass}
               >
                 <option value="" disabled hidden>
@@ -176,7 +169,7 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 <input
                   type="checkbox"
                   checked={formData[el.id] || false}
-                  onChange={handleChange}
+                  onChange={(e) => handleChange(e, el)}
                 />
                 <span>
                   {el.label} {el.required && <span style={{ color: "red" }}>*</span>}
@@ -189,7 +182,7 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
               <input
                 key={el.id}
                 type="file"
-                onChange={handleChange}
+                onChange={(e) => handleChange(e, el)}
                 className="w-full"
               />,
               el.label,
@@ -202,7 +195,7 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 key={el.id}
                 type="date"
                 value={formData[el.id] || ""}
-                onChange={handleChange}
+                onChange={(e) => handleChange(e, el)}
                 className={commonInputClass}
               />,
               el.label,
@@ -230,7 +223,7 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                       name={`radio-${el.id}`}
                       value={opt.value}
                       checked={formData[el.id] === opt.value}
-                      onChange={(e) => onChange(el.id, e.target.value)}
+                      onChange={(e) => handleChange(e, el)}
                     />
                     <span className="p-1">{opt.label}</span>
                   </label>
