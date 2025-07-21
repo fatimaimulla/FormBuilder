@@ -107,6 +107,22 @@ export default function TextConfig({ field, updateField }) {
           <p className="text-sm text-red-600 mt-1">{regexError}</p>
         )}
       </div>
+
+      {/* custom error */}
+      {!regexError && regexInput.trim() !== "" && (
+        <div className="mt-3">
+          <label className="block text-md font-medium mb-1">
+            Custom Error Message
+          </label>
+          <input
+            type="text"
+            value={field.patternError || ""}
+            onChange={(e) => updateField("patternError", e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            placeholder="e.g. Enter Valid Email.."
+          />
+        </div>
+      )}
     </div>
   );
 }

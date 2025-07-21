@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 
 const commonInputClass =
   "border rounded px-4 py-2 w-full bg-white text-sm";
 
-const withLabelWrapper = (element, label, required) => (
-  <div className="flex flex-col gap-3">
+const withLabelWrapper = (element, label, required, error) => (
+  <div className="flex flex-col gap-1">
     <label className="block font-semibold text-sm text-gray-700">
-      {label} {required && <span style={{ color: "red" }}>*</span>}
+      {label} {required && <span className="text-red-500">*</span>}
     </label>
     {element}
+    {error && (
+      <span className="text-sm text-red-500 mt-1">{error}</span>
+    )}
   </div>
 );
 
@@ -55,6 +58,51 @@ const evaluateVisibility = (element, formData, elements) => {
 };
 
 const PreviewRenderer = ({ elements, formData, onChange }) => {
+  const [errors, setErrors] = useState({});
+
+  const handleBlur = (el, value) => {
+    let error = "";
+
+    // Pattern validation
+    if (el.pattern) {
+      try {
+        const regex = new RegExp(el.pattern);
+        if (regex.test(value)) {
+          error ="";
+        }
+        else
+        {
+            error =  el.patternError || "Invalid format.";
+        }
+      } catch {
+        // Invalid regex should be ignored
+      }
+    }
+
+    // Min/max length for text
+    if (el.type === "text") {
+      if (el.minLength && value.length < parseInt(el.minLength)) {
+        error = `Minimum ${el.minLength} characters required.`;
+      }
+      if (el.maxLength && value.length > parseInt(el.maxLength)) {
+        error = `Maximum ${el.maxLength} characters allowed.`;
+      }
+    }
+
+    // Min/max value for number
+    if (el.type === "number" && value !== "") {
+      const numVal = parseFloat(value);
+      if (el.minLength && numVal < parseFloat(el.minLength)) {
+        error = `Minimum value is ${el.minLength}.`;
+      }
+      if (el.maxLength && numVal > parseFloat(el.maxLength)) {
+        error = `Maximum value is ${el.maxLength}.`;
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [el.id]: error }));
+  };
+
   return (
     <div className="space-y-4">
       {elements.map((el) => {
@@ -63,7 +111,8 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
         if (!isVisible) return null;
 
         const handleChange = (e) => {
-          const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+          const value =
+            e.target.type === "checkbox" ? e.target.checked : e.target.value;
           onChange(el.id, value);
         };
 
@@ -71,26 +120,39 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
           case "text":
             return withLabelWrapper(
               <input
+                key={el.id}
                 type="text"
                 value={formData[el.id] || ""}
                 placeholder={el.placeholder || "Enter text..."}
                 onChange={handleChange}
+                onBlur={(e) => handleBlur(el, e.target.value)}
                 className={commonInputClass}
-              />, el.label, el.required
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
             );
+
           case "number":
             return withLabelWrapper(
               <input
+                key={el.id}
                 type="number"
                 value={formData[el.id] || ""}
                 placeholder={el.placeholder || "Enter number..."}
                 onChange={handleChange}
+                onBlur={(e) => handleBlur(el, e.target.value)}
                 className={commonInputClass}
-              />, el.label, el.required
+              />,
+              el.label,
+              el.required,
+              errors[el.id]
             );
+
           case "select":
             return withLabelWrapper(
               <select
+                key={el.id}
                 value={formData[el.id] || ""}
                 onChange={handleChange}
                 className={commonInputClass}
@@ -103,8 +165,11 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                     {opt.label}
                   </option>
                 ))}
-              </select>, el.label, el.required
+              </select>,
+              el.label,
+              el.required
             );
+
           case "checkbox":
             return (
               <label key={el.id} className="inline-flex items-center space-x-3">
@@ -118,23 +183,32 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 </span>
               </label>
             );
+
           case "file":
             return withLabelWrapper(
               <input
+                key={el.id}
                 type="file"
                 onChange={handleChange}
                 className="w-full"
-              />, el.label, el.required
+              />,
+              el.label,
+              el.required
             );
+
           case "date":
             return withLabelWrapper(
               <input
+                key={el.id}
                 type="date"
                 value={formData[el.id] || ""}
                 onChange={handleChange}
                 className={commonInputClass}
-              />, el.label, el.required
+              />,
+              el.label,
+              el.required
             );
+
           case "section":
             return (
               <div key={el.id}>
@@ -142,29 +216,34 @@ const PreviewRenderer = ({ elements, formData, onChange }) => {
                 {el.description && <p className="text-gray-500">{el.description}</p>}
               </div>
             );
-        case "radio":
+
+          case "radio":
             return (
-                <div key={el.id} className="flex flex-col gap-2">
+              <div key={el.id} className="flex flex-col gap-2">
                 <label className="font-semibold text-sm text-gray-700">
-                    {el.label} {el.required && <span style={{ color: 'red' }}>*</span>}
+                  {el.label} {el.required && <span className="text-red-500">*</span>}
                 </label>
                 {el.options?.map((opt, i) => (
-                    <label key={i} className="inline-flex items-center gap-2">
+                  <label key={i} className="inline-flex items-center gap-2">
                     <input
-                        type="radio"
-                        name={`radio-${el.id}`} // ensures grouped radios
-                        value={opt.value}
-                        checked={formData[el.id] === opt.value}
-                        onChange={(e) => onChange(el.id, e.target.value)}
+                      type="radio"
+                      name={`radio-${el.id}`}
+                      value={opt.value}
+                      checked={formData[el.id] === opt.value}
+                      onChange={(e) => onChange(el.id, e.target.value)}
                     />
                     <span className="p-1">{opt.label}</span>
-                    </label>
+                  </label>
                 ))}
-                </div>
+              </div>
             );
-        
+
           default:
-            return <div key={el.id} className="text-gray-400 italic">Unknown field</div>;
+            return (
+              <div key={el.id} className="text-gray-400 italic">
+                Unknown field
+              </div>
+            );
         }
       })}
     </div>

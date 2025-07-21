@@ -102,6 +102,22 @@ export default function NumberConfig({ field, updateField }) {
         {regexError && (
           <p className="text-red-500 text-sm mt-1">{regexError}</p>
         )}
+
+        {/* Custom Error Message */}
+    {!regexError && regexInput.trim() !== "" && (
+      <div className="mt-3">
+        <label className="block text-md font-medium mb-1">
+          Custom Error Message
+        </label>
+        <input
+          type="text"
+          value={field.patternError || ""}
+          onChange={(e) => updateField("patternError", e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          placeholder="e.g. Only numbers are allowed"
+        />
+      </div>
+    )}
       </div>
     </div>
   );
