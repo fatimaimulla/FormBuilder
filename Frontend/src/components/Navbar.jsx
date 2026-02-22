@@ -1,7 +1,15 @@
-import { Undo, Redo, Download, Upload, Eye, Settings, WandSparkles, Share2 } from 'lucide-react';
+import { Download, Upload, Eye, Settings, WandSparkles, Share2, LogOut } from 'lucide-react';
 
-export default function CustomNavbar({ mode, setMode, elements, setElements, onImportClick, onPublishClick, showViewButtons }) {
-  let hasElements = elements.length > 0;
+export default function CustomNavbar({
+  mode,
+  setMode,
+  elements,
+  onImportClick,
+  onPublishClick,
+  showViewButtons,
+  user,
+  onLogout,
+}) {
 
   const handleExport = () => {
     const formData = {
@@ -66,6 +74,21 @@ export default function CustomNavbar({ mode, setMode, elements, setElements, onI
           disabled={elements.length === 0 || (elements.length === 1 && elements[0].type === "section")}>
           <Share2 className="w-4 h-4" />Publish
         </button>
+
+        <div className="flex items-center gap-3 border-l pl-4">
+          <div className="text-right leading-tight">
+            <p className="text-xs text-gray-500">Signed in as</p>
+            <p className="text-sm font-medium text-gray-900">{user?.name || user?.email || "Creator"}</p>
+          </div>
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-100"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
       </div>
     </header>
   );

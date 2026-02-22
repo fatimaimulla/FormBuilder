@@ -7,6 +7,7 @@ import SharedForm from './components/SharedForm.jsx';
 import LandingPage from './components/LandingPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
+import LoginPage from './components/LoginPage.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route
             path="/build-forms"
             element={(

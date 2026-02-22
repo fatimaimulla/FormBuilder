@@ -11,9 +11,11 @@ import LogicPanel from './components/LogicPanel'
 import ImportModal from './components/ImportModal'
 import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
+import { useAuth } from './auth/AuthContext'
 
 function App()
 {
+  const { user, logout } = useAuth();
    useEffect(() => {
     const wakeUpServer = async () => {
       try {
@@ -94,6 +96,8 @@ function App()
           setMode={setMode}
           elements={elements}
           setElements={setElements}
+          user={user}
+          onLogout={logout}
           onImportClick={() => setShowImportModal(true)}
           onPublishClick={() => setShowPublishModal(true)}
           showViewButtons={shouldShowPanel}

@@ -5,7 +5,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   const handleStartClick = () => {
-    navigate("/build-forms");
+    navigate("/login");
   };
 
   return (
@@ -26,7 +26,7 @@ export default function LandingPage() {
         <button
           onClick={handleStartClick}
           className="bg-black text-white px-7 py-2.5 rounded hover:bg-gray-700 transition duration-300">
-          <span className="flex gap-3"> Start Building <ArrowRight/> </span>
+          <span className="flex gap-3"> Login To Build <ArrowRight/> </span>
         </button>
       </div>
     </div>
