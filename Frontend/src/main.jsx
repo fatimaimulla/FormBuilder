@@ -5,15 +5,26 @@ import './index.css';
 import App from './App.jsx';
 import SharedForm from './components/SharedForm.jsx';
 import LandingPage from './components/LandingPage.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import { AuthProvider } from './auth/AuthContext.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/build-forms" element={<App />} />
-        <Route path="/shared" element={<SharedForm />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/build-forms"
+            element={(
+              <ProtectedRoute>
+                <App />
+              </ProtectedRoute>
+            )}
+          />
+          <Route path="/shared" element={<SharedForm />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   </StrictMode>,
 );

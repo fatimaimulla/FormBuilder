@@ -11,7 +11,7 @@ export default function PublishModal({ onClose, elements }) {
   useEffect(() => {
     const publishForm = async () => {
       try {
-        const res = await fetch("https://formb-tk0d.onrender.com/forms", {
+        const res = await fetch("http://localhost:3000/forms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(elements),

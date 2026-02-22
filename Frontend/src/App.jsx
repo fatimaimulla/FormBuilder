@@ -3,6 +3,7 @@ import { DndContext, DragOverlay } from '@dnd-kit/core'
 import CustomNavbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import axios from 'axios'
+import { BACKEND_BASE_URL } from './lib/apiClient'
 import Canvas from './components/Canvas'
 import FieldConfigPanel from './components/FieldConfigPanel'
 import FormPreview from './components/FormPreview'
@@ -16,7 +17,7 @@ function App()
    useEffect(() => {
     const wakeUpServer = async () => {
       try {
-        await axios.get('https://formb-tk0d.onrender.com');
+        await axios.get(BACKEND_BASE_URL);
         console.log('🎉 Backend is awake!');
       } catch (error) {
         console.error('❌ Failed to wake backend:', error);

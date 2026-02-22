@@ -19,7 +19,7 @@ export default function SharedForm() {
 
     const fetchForm = async () => {
       try {
-        const res = await fetch(`https://formb-tk0d.onrender.com/forms/${formId}`);
+        const res = await fetch(`http://localhost:3000/forms/${formId}`);
         if (!res.ok) {
           throw new Error("Form not found");
         }
