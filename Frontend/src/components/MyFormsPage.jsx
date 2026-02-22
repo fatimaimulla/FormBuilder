@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../lib/apiClient";
 
+function formatDate(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString();
+}
+
 export default function MyFormsPage() {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copiedFormId, setCopiedFormId] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,6 +29,17 @@ export default function MyFormsPage() {
 
     loadForms();
   }, []);
+
+  const handleCopyLink = async (formId) => {
+    const link = `${window.location.origin}/shared?form=${formId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedFormId(formId);
+      setTimeout(() => setCopiedFormId(""), 1500);
+    } catch {
+      setError("Failed to copy link.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-8">
@@ -59,7 +76,12 @@ export default function MyFormsPage() {
                   {form.status}
                 </span>
                 <span className="text-gray-600">{form.fieldCount} fields</span>
+                <span className="text-gray-600">{form.responseCount || 0} responses</span>
               </div>
+
+              <p className="text-xs text-gray-500">
+                Updated: {formatDate(form.updatedAt)}
+              </p>
 
               <div className="flex gap-3">
                 <button
@@ -73,6 +95,12 @@ export default function MyFormsPage() {
                   className="px-3 py-2 rounded bg-black text-white text-sm hover:bg-gray-700"
                 >
                   Responses
+                </button>
+                <button
+                  onClick={() => handleCopyLink(form.id)}
+                  className="px-3 py-2 rounded border text-sm hover:bg-gray-100"
+                >
+                  {copiedFormId === form.id ? "Copied" : "Copy Link"}
                 </button>
               </div>
             </div>

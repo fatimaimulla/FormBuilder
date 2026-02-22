@@ -10,6 +10,8 @@ export default function CustomNavbar({
   showViewButtons,
   user,
   onLogout,
+  publishLabel = "Publish",
+  publishDisabled = false,
 }) {
   const navigate = useNavigate();
 
@@ -74,13 +76,19 @@ export default function CustomNavbar({
         </button>
         <button
           className={`flex items-center gap-3 px-4 py-2 rounded border ${
-            elements.length === 0 || (elements.length === 1 && elements[0].type === "section")
+            elements.length === 0 ||
+            (elements.length === 1 && elements[0].type === "section") ||
+            publishDisabled
               ? "bg-gray-200 text-gray-400 cursor-not-allowed"
               : "bg-black text-white"
           }`}
           onClick={elements.length > 1 ? onPublishClick : null}
-          disabled={elements.length === 0 || (elements.length === 1 && elements[0].type === "section")}>
-          <Share2 className="w-4 h-4" />Publish
+          disabled={
+            elements.length === 0 ||
+            (elements.length === 1 && elements[0].type === "section") ||
+            publishDisabled
+          }>
+          <Share2 className="w-4 h-4" />{publishLabel}
         </button>
 
         <div className="flex items-center gap-3 border-l pl-4">

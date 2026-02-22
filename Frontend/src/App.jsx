@@ -48,6 +48,7 @@ function App()
   const [forceShowPanel, setForceShowPanel] = useState(false)
   const [initialLoadError, setInitialLoadError] = useState("")
   const [initialLoading, setInitialLoading] = useState(Boolean(editFormId))
+  const [baselineSnapshot, setBaselineSnapshot] = useState(null)
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
@@ -65,6 +66,7 @@ function App()
           setElements(fetched);
           setForceShowPanel(true);
         }
+        setBaselineSnapshot(JSON.stringify(Array.isArray(fetched) ? fetched : []));
       } catch (error) {
         setInitialLoadError("Failed to load existing form for editing.");
       } finally {
@@ -112,6 +114,10 @@ function App()
 
   const isOnlySectionPresent = elements.length === 1 && elements[0].type === "section";
   const shouldShowPanel = !isOnlySectionPresent || forceShowPanel;
+  const isEditMode = Boolean(editFormId);
+  const hasUnsavedChanges = isEditMode
+    ? baselineSnapshot !== null && JSON.stringify(elements) !== baselineSnapshot
+    : true;
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -126,6 +132,8 @@ function App()
           onImportClick={() => setShowImportModal(true)}
           onPublishClick={() => setShowPublishModal(true)}
           showViewButtons={shouldShowPanel}
+          publishLabel={isEditMode ? "Publish Edits" : "Publish"}
+          publishDisabled={isEditMode && !hasUnsavedChanges}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -200,6 +208,11 @@ function App()
           onClose={() => setShowPublishModal(false)}
           elements={elements}
           formId={editFormId}
+          onPublished={() => {
+            if (isEditMode) {
+              setBaselineSnapshot(JSON.stringify(elements));
+            }
+          }}
         />
       )}
 

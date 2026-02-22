@@ -3,7 +3,7 @@ import QRCode from "react-qr-code";
 import { ClipboardCopy, ExternalLink, Check } from "lucide-react";
 import apiClient from "../lib/apiClient";
 
-export default function PublishModal({ onClose, elements, formId }) {
+export default function PublishModal({ onClose, elements, formId, onPublished }) {
   const [tab, setTab] = useState("link");
   const [copied, setCopied] = useState(false);
   const [formLink, setFormLink] = useState("");
@@ -28,6 +28,9 @@ export default function PublishModal({ onClose, elements, formId }) {
         await apiClient.post(`/forms/${idToUse}/publish`);
         const link = `${window.location.origin}/shared?form=${idToUse}`;
         setFormLink(link);
+        if (onPublished) {
+          onPublished(idToUse);
+        }
       } catch (err) {
         console.error("Error publishing form:", err);
         setError("Failed to publish form. Please try again.");
@@ -37,7 +40,7 @@ export default function PublishModal({ onClose, elements, formId }) {
     };
 
     publishForm();
-  }, [elements]);
+  }, [elements, formId, onPublished]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(formLink);

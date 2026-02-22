@@ -1,24 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../lib/apiClient";
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString();
+}
+
+function isEmailField(field) {
+  const label = String(field?.label || "").trim().toLowerCase();
+  return label === "email" || label === "e-mail";
+}
 
 export default function FormResponsesPage() {
   const { formId } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [listError, setListError] = useState("");
+  const [detailError, setDetailError] = useState("");
   const [search, setSearch] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
   const [selectedResponse, setSelectedResponse] = useState(null);
+  const [selectedResponseId, setSelectedResponseId] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [fieldMeta, setFieldMeta] = useState([]);
+  const [showAllResponsesTable, setShowAllResponsesTable] = useState(false);
+  const [allTableLoading, setAllTableLoading] = useState(false);
+  const [allTableError, setAllTableError] = useState("");
+  const [allTableRows, setAllTableRows] = useState([]);
+
+  const visibleFieldMeta = useMemo(
+    () => fieldMeta.filter((field) => !isEmailField(field)),
+    [fieldMeta]
+  );
+
+  useEffect(() => {
+    const loadFormMeta = async () => {
+      if (!formId) return;
+      try {
+        const res = await apiClient.get(`/forms/${formId}/mine`);
+        const config = res?.data?.data?.form?.config || [];
+        const normalized = Array.isArray(config)
+          ? config
+              .filter((field) => field && field.type !== "section")
+              .map((field) => ({
+                id: String(field.id),
+                label: field.label || String(field.id),
+              }))
+          : [];
+        setFieldMeta(normalized);
+      } catch {
+        setFieldMeta([]);
+      }
+    };
+
+    loadFormMeta();
+  }, [formId]);
 
   useEffect(() => {
     const loadResponses = async () => {
       if (!formId) return;
       setLoading(true);
-      setError("");
+      setListError("");
       try {
         const query = new URLSearchParams({
           page: String(page),
@@ -29,9 +76,14 @@ export default function FormResponsesPage() {
         const responseItems = res?.data?.data?.items || [];
         const pagination = res?.data?.data?.pagination || {};
         setItems(responseItems);
+        setTotal(pagination.total || 0);
         setTotalPages(pagination.totalPages || 1);
+        if (responseItems.length === 0) {
+          setSelectedResponse(null);
+          setSelectedResponseId("");
+        }
       } catch {
-        setError("Failed to load responses.");
+        setListError("Failed to load responses.");
       } finally {
         setLoading(false);
       }
@@ -43,13 +95,107 @@ export default function FormResponsesPage() {
   const loadResponseDetail = async (responseId) => {
     if (!formId || !responseId) return;
     setDetailLoading(true);
+    setDetailError("");
+    setSelectedResponseId(responseId);
     try {
       const res = await apiClient.get(`/forms/${formId}/responses/${responseId}`);
       setSelectedResponse(res?.data?.data?.response || null);
     } catch {
-      setError("Failed to load response detail.");
+      setDetailError("Failed to load response detail.");
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const detailRows = useMemo(() => {
+    if (!selectedResponse) return [];
+
+    const answers = selectedResponse.answers || {};
+    const rows = [];
+
+    visibleFieldMeta.forEach((field) => {
+      const rawValue = answers[field.id];
+      let value = rawValue;
+
+      if (Array.isArray(rawValue)) {
+        value = rawValue.join(", ");
+      } else if (rawValue === null || rawValue === undefined || rawValue === "") {
+        value = "-";
+      } else if (typeof rawValue === "object") {
+        value = JSON.stringify(rawValue);
+      }
+
+      rows.push({
+        label: field.label,
+        value,
+      });
+    });
+
+    return rows;
+  }, [selectedResponse, visibleFieldMeta]);
+
+  const loadAllResponsesTable = async () => {
+    if (!formId) return;
+    setAllTableLoading(true);
+    setAllTableError("");
+    try {
+      let currentPage = 1;
+      let localTotalPages = 1;
+      const allItems = [];
+
+      while (currentPage <= localTotalPages) {
+        const query = new URLSearchParams({
+          page: String(currentPage),
+          limit: "100",
+          search: "",
+        });
+        const res = await apiClient.get(`/forms/${formId}/responses?${query.toString()}`);
+        const itemsOnPage = res?.data?.data?.items || [];
+        const pagination = res?.data?.data?.pagination || {};
+        localTotalPages = pagination.totalPages || 1;
+        allItems.push(...itemsOnPage);
+        currentPage += 1;
+      }
+
+      const detailResponses = await Promise.all(
+        allItems.map(async (item) => {
+          const res = await apiClient.get(`/forms/${formId}/responses/${item.id}`);
+          return res?.data?.data?.response || null;
+        })
+      );
+
+      const normalizedRows = detailResponses
+        .filter(Boolean)
+        .map((response) => {
+          const answers = response.answers || {};
+          const mappedAnswers = {};
+
+          visibleFieldMeta.forEach((field) => {
+            const rawValue = answers[field.id];
+            if (Array.isArray(rawValue)) {
+              mappedAnswers[field.id] = rawValue.join(", ");
+            } else if (rawValue === null || rawValue === undefined || rawValue === "") {
+              mappedAnswers[field.id] = "-";
+            } else if (typeof rawValue === "object") {
+              mappedAnswers[field.id] = JSON.stringify(rawValue);
+            } else {
+              mappedAnswers[field.id] = String(rawValue);
+            }
+          });
+
+          return {
+            id: response.id,
+            submitterDetail: `${response.submittedBy?.name || "Unknown"} (${response.submittedBy?.email || "-"})`,
+            answers: mappedAnswers,
+          };
+        });
+
+      setAllTableRows(normalizedRows);
+      setShowAllResponsesTable(true);
+    } catch {
+      setAllTableError("Failed to load full response table.");
+    } finally {
+      setAllTableLoading(false);
     }
   };
 
@@ -58,32 +204,67 @@ export default function FormResponsesPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Form Responses</h1>
-          <button
-            onClick={() => navigate("/dashboard/forms")}
-            className="px-4 py-2 rounded border text-sm hover:bg-gray-100"
-          >
-            Back to My Forms
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={loadAllResponsesTable}
+              disabled={allTableLoading || loading || total === 0}
+              className="px-4 py-2 rounded bg-black text-white text-sm hover:bg-gray-700 disabled:opacity-50"
+            >
+              {allTableLoading ? "Loading..." : "View All Responses Table"}
+            </button>
+            <button
+              onClick={() => navigate("/dashboard/forms")}
+              className="px-4 py-2 rounded border text-sm hover:bg-gray-100"
+            >
+              Back to My Forms
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-4">
           <div className="bg-white border rounded-lg p-4 space-y-4">
-            <div className="flex gap-3">
+            <form
+              className="flex gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPage(1);
+                setSearch(draftSearch.trim());
+              }}
+            >
               <input
-                value={search}
-                onChange={(e) => {
-                  setPage(1);
-                  setSearch(e.target.value);
-                }}
+                value={draftSearch}
+                onChange={(e) => setDraftSearch(e.target.value)}
                 placeholder="Search by submitter name or email"
                 className="w-full border px-3 py-2 rounded text-sm"
               />
+              <button
+                type="submit"
+                className="px-4 py-2 rounded border text-sm hover:bg-gray-100"
+              >
+                Search
+              </button>
+            </form>
+
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <p>{total} total responses</p>
+              {search && (
+                <button
+                  onClick={() => {
+                    setDraftSearch("");
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="underline"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
 
             {loading && <p className="text-sm text-gray-600">Loading responses...</p>}
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {listError && <p className="text-sm text-red-600">{listError}</p>}
 
-            {!loading && !error && items.length === 0 && (
+            {!loading && !listError && items.length === 0 && (
               <p className="text-sm text-gray-600">No responses found.</p>
             )}
 
@@ -92,14 +273,16 @@ export default function FormResponsesPage() {
                 <button
                   key={item.id}
                   onClick={() => loadResponseDetail(item.id)}
-                  className="w-full text-left border rounded p-3 hover:bg-gray-50"
+                  className={`w-full text-left border rounded p-3 hover:bg-gray-50 ${
+                    selectedResponseId === item.id ? "border-black bg-gray-50" : ""
+                  }`}
                 >
                   <p className="text-sm font-medium text-gray-900">
                     {item.submittedBy?.name || "Unknown"}
                   </p>
                   <p className="text-xs text-gray-600">{item.submittedBy?.email}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {new Date(item.submittedAt).toLocaleString()}
+                    {formatDateTime(item.submittedAt)}
                   </p>
                 </button>
               ))}
@@ -129,26 +312,95 @@ export default function FormResponsesPage() {
           <div className="bg-white border rounded-lg p-4">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Response Detail</h2>
             {detailLoading && <p className="text-sm text-gray-600">Loading detail...</p>}
+            {!detailLoading && detailError && (
+              <p className="text-sm text-red-600">{detailError}</p>
+            )}
             {!detailLoading && !selectedResponse && (
               <p className="text-sm text-gray-600">Select a response to view details.</p>
             )}
+
             {!detailLoading && selectedResponse && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-xs text-gray-600">
                   <span className="font-medium">Submitter:</span>{" "}
                   {selectedResponse.submittedBy?.name} ({selectedResponse.submittedBy?.email})
                 </p>
                 <p className="text-xs text-gray-600">
                   <span className="font-medium">Submitted:</span>{" "}
-                  {new Date(selectedResponse.submittedAt).toLocaleString()}
+                  {formatDateTime(selectedResponse.submittedAt)}
                 </p>
-                <pre className="mt-2 bg-gray-50 border rounded p-3 text-xs overflow-auto max-h-[420px]">
-                  {JSON.stringify(selectedResponse.answers, null, 2)}
-                </pre>
+
+                <div className="overflow-hidden border rounded">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700">Field</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailRows.map((row) => (
+                        <tr key={row.label} className="border-b last:border-b-0">
+                          <td className="px-3 py-2 text-gray-900">{row.label}</td>
+                          <td className="px-3 py-2 text-gray-700">{String(row.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
         </div>
+
+        {allTableError && (
+          <div className="mt-4 text-sm text-red-600">{allTableError}</div>
+        )}
+
+        {showAllResponsesTable && (
+          <div className="mt-6 bg-white border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">All Responses (Tabular)</h3>
+              <button
+                onClick={() => setShowAllResponsesTable(false)}
+                className="text-sm text-gray-600 hover:underline"
+              >
+                Hide
+              </button>
+            </div>
+
+            {allTableRows.length === 0 ? (
+              <p className="text-sm text-gray-600">No responses available for tabular view.</p>
+            ) : (
+              <div className="overflow-auto border rounded">
+                <table className="w-full text-sm min-w-[760px]">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-gray-700">Submitter Detail</th>
+                      {visibleFieldMeta.map((field) => (
+                        <th key={field.id} className="text-left px-3 py-2 font-medium text-gray-700">
+                          {field.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allTableRows.map((row) => (
+                      <tr key={row.id} className="border-b last:border-b-0">
+                        <td className="px-3 py-2 text-gray-900">{row.submitterDetail}</td>
+                        {visibleFieldMeta.map((field) => (
+                          <td key={`${row.id}-${field.id}`} className="px-3 py-2 text-gray-700">
+                            {row.answers[field.id] || "-"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
