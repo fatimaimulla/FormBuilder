@@ -8,6 +8,8 @@ import LandingPage from './components/LandingPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { AuthProvider } from './auth/AuthContext.jsx';
 import LoginPage from './components/LoginPage.jsx';
+import MyFormsPage from './components/MyFormsPage.jsx';
+import FormResponsesPage from './components/FormResponsesPage.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -21,6 +23,22 @@ createRoot(document.getElementById('root')).render(
             element={(
               <ProtectedRoute>
                 <App />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/dashboard/forms"
+            element={(
+              <ProtectedRoute>
+                <MyFormsPage />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/dashboard/forms/:formId/responses"
+            element={(
+              <ProtectedRoute>
+                <FormResponsesPage />
               </ProtectedRoute>
             )}
           />

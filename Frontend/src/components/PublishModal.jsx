@@ -1,31 +1,36 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 import { ClipboardCopy, ExternalLink, Check } from "lucide-react";
+import apiClient from "../lib/apiClient";
 
-export default function PublishModal({ onClose, elements }) {
+export default function PublishModal({ onClose, elements, formId }) {
   const [tab, setTab] = useState("link");
   const [copied, setCopied] = useState(false);
   const [formLink, setFormLink] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const publishForm = async () => {
       try {
-        const res = await fetch("http://localhost:3000/forms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(elements),
-        });
-
-        const data = await res.json();
-        if (data.id) {
-          const link = `${window.location.origin}/shared?form=${data.id}`;
-          setFormLink(link);
+        let idToUse = formId;
+        if (idToUse) {
+          await apiClient.put(`/forms/${idToUse}`, elements);
         } else {
-          console.error("No ID returned from backend");
+          const createRes = await apiClient.post("/forms", elements);
+          idToUse = createRes?.data?.id || createRes?.data?.data?.id;
         }
+
+        if (!idToUse) {
+          throw new Error("No form id returned from backend");
+        }
+
+        await apiClient.post(`/forms/${idToUse}/publish`);
+        const link = `${window.location.origin}/shared?form=${idToUse}`;
+        setFormLink(link);
       } catch (err) {
         console.error("Error publishing form:", err);
+        setError("Failed to publish form. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -79,6 +84,8 @@ export default function PublishModal({ onClose, elements }) {
         {/* Content */}
         {loading ? (
           <div className="text-center text-gray-500 text-sm">Publishing form...</div>
+        ) : error ? (
+          <div className="text-center text-red-600 text-sm">{error}</div>
         ) : tab === "link" ? (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">

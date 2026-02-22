@@ -12,10 +12,14 @@ import ImportModal from './components/ImportModal'
 import PublishModal from './components/PublishModal'
 import { useEffect, useState } from 'react'
 import { useAuth } from './auth/AuthContext'
+import apiClient from './lib/apiClient'
+import { useSearchParams } from 'react-router-dom'
 
 function App()
 {
   const { user, logout } = useAuth();
+  const [searchParams] = useSearchParams();
+  const editFormId = searchParams.get("form");
    useEffect(() => {
     const wakeUpServer = async () => {
       try {
@@ -42,13 +46,34 @@ function App()
   const [showImportModal, setShowImportModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
   const [forceShowPanel, setForceShowPanel] = useState(false)
+  const [initialLoadError, setInitialLoadError] = useState("")
+  const [initialLoading, setInitialLoading] = useState(Boolean(editFormId))
 
   function handleDragStart(event) {
     setActiveDragItem(event.active.data.current)
   }
   useEffect(() => {
-    
-  }, [])
+    const loadFormForEditing = async () => {
+      if (!editFormId) {
+        setInitialLoading(false);
+        return;
+      }
+      try {
+        const res = await apiClient.get(`/forms/${editFormId}/mine`);
+        const fetched = res?.data?.data?.form?.config || [];
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setElements(fetched);
+          setForceShowPanel(true);
+        }
+      } catch (error) {
+        setInitialLoadError("Failed to load existing form for editing.");
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadFormForEditing();
+  }, [editFormId])
 
   useEffect(() => {
     console.log(elements)
@@ -104,6 +129,17 @@ function App()
         />
 
         <div className="flex flex-1 overflow-hidden">
+          {initialLoading ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-600">
+              Loading form...
+            </div>
+          ) : (
+            <>
+          {initialLoadError && (
+            <div className="absolute top-24 right-6 z-40 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded text-sm">
+              {initialLoadError}
+            </div>
+          )}
           {/* Sidebar */}
           <div className="w-[20%] bg-white border px-6 py-4 overflow-hidden">
             <Sidebar />
@@ -143,6 +179,8 @@ function App()
               )}
             </div>
           )}
+            </>
+          )}
         </div>
       </div>
 
@@ -161,6 +199,7 @@ function App()
         <PublishModal
           onClose={() => setShowPublishModal(false)}
           elements={elements}
+          formId={editFormId}
         />
       )}
 

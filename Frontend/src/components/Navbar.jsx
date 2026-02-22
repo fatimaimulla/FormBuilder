@@ -1,4 +1,5 @@
 import { Download, Upload, Eye, Settings, WandSparkles, Share2, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function CustomNavbar({
   mode,
@@ -10,6 +11,7 @@ export default function CustomNavbar({
   user,
   onLogout,
 }) {
+  const navigate = useNavigate();
 
   const handleExport = () => {
     const formData = {
@@ -60,6 +62,12 @@ export default function CustomNavbar({
 
         <button className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300" onClick={onImportClick}>
           <Upload className='w-4 h-4' />Import
+        </button>
+        <button
+          className="flex items-center gap-3 bg-white text-black px-4 py-2 rounded border border-gray-300"
+          onClick={() => navigate("/dashboard/forms")}
+        >
+          My Forms
         </button>
         <button className="flex items-center gap-3 bg-black text-white px-4 py-2 rounded border" onClick={handleExport}>
           <Download className='w-4 h-4' />Export
