@@ -12,6 +12,13 @@ function isEmailField(field) {
   return label === "email" || label === "e-mail";
 }
 
+function normalizeAnswerValue(rawValue) {
+  if (Array.isArray(rawValue)) return rawValue.join(", ");
+  if (rawValue === null || rawValue === undefined || rawValue === "") return "-";
+  if (typeof rawValue === "object") return JSON.stringify(rawValue);
+  return String(rawValue);
+}
+
 export default function FormResponsesPage() {
   const { formId } = useParams();
   const navigate = useNavigate();
@@ -32,11 +39,22 @@ export default function FormResponsesPage() {
   const [allTableLoading, setAllTableLoading] = useState(false);
   const [allTableError, setAllTableError] = useState("");
   const [allTableRows, setAllTableRows] = useState([]);
+  const [responseDetailCache, setResponseDetailCache] = useState({});
 
   const visibleFieldMeta = useMemo(
     () => fieldMeta.filter((field) => !isEmailField(field)),
     [fieldMeta]
   );
+
+  useEffect(() => {
+    setResponseDetailCache({});
+    setSelectedResponse(null);
+    setSelectedResponseId("");
+    setDetailError("");
+    setShowAllResponsesTable(false);
+    setAllTableRows([]);
+    setAllTableError("");
+  }, [formId]);
 
   useEffect(() => {
     const loadFormMeta = async () => {
@@ -94,18 +112,63 @@ export default function FormResponsesPage() {
 
   const loadResponseDetail = async (responseId) => {
     if (!formId || !responseId) return;
+    const cached = responseDetailCache[responseId];
+    if (cached) {
+      setSelectedResponseId(responseId);
+      setSelectedResponse(cached);
+      setDetailError("");
+      return;
+    }
+
     setDetailLoading(true);
     setDetailError("");
     setSelectedResponseId(responseId);
     try {
       const res = await apiClient.get(`/forms/${formId}/responses/${responseId}`);
-      setSelectedResponse(res?.data?.data?.response || null);
+      const response = res?.data?.data?.response || null;
+      setSelectedResponse(response);
+      if (response) {
+        setResponseDetailCache((prev) => ({ ...prev, [responseId]: response }));
+      }
     } catch {
       setDetailError("Failed to load response detail.");
     } finally {
       setDetailLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!formId || items.length === 0) return;
+    let cancelled = false;
+
+    const missingIds = items
+      .map((item) => item.id)
+      .filter((id) => !responseDetailCache[id]);
+
+    if (missingIds.length === 0) return;
+
+    Promise.allSettled(
+      missingIds.map(async (id) => {
+        const res = await apiClient.get(`/forms/${formId}/responses/${id}`);
+        return { id, response: res?.data?.data?.response || null };
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const merged = {};
+      results.forEach((result) => {
+        if (result.status === "fulfilled" && result.value.response) {
+          merged[result.value.id] = result.value.response;
+        }
+      });
+      if (Object.keys(merged).length > 0) {
+        setResponseDetailCache((prev) => ({ ...prev, ...merged }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formId, items, responseDetailCache]);
 
   const detailRows = useMemo(() => {
     if (!selectedResponse) return [];
@@ -114,17 +177,7 @@ export default function FormResponsesPage() {
     const rows = [];
 
     visibleFieldMeta.forEach((field) => {
-      const rawValue = answers[field.id];
-      let value = rawValue;
-
-      if (Array.isArray(rawValue)) {
-        value = rawValue.join(", ");
-      } else if (rawValue === null || rawValue === undefined || rawValue === "") {
-        value = "-";
-      } else if (typeof rawValue === "object") {
-        value = JSON.stringify(rawValue);
-      }
-
+      const value = normalizeAnswerValue(answers[field.id]);
       rows.push({
         label: field.label,
         value,
@@ -159,10 +212,23 @@ export default function FormResponsesPage() {
 
       const detailResponses = await Promise.all(
         allItems.map(async (item) => {
+          if (responseDetailCache[item.id]) {
+            return responseDetailCache[item.id];
+          }
           const res = await apiClient.get(`/forms/${formId}/responses/${item.id}`);
           return res?.data?.data?.response || null;
         })
       );
+
+      const cacheUpdates = {};
+      detailResponses.forEach((response) => {
+        if (response?.id) {
+          cacheUpdates[response.id] = response;
+        }
+      });
+      if (Object.keys(cacheUpdates).length > 0) {
+        setResponseDetailCache((prev) => ({ ...prev, ...cacheUpdates }));
+      }
 
       const normalizedRows = detailResponses
         .filter(Boolean)
@@ -171,16 +237,7 @@ export default function FormResponsesPage() {
           const mappedAnswers = {};
 
           visibleFieldMeta.forEach((field) => {
-            const rawValue = answers[field.id];
-            if (Array.isArray(rawValue)) {
-              mappedAnswers[field.id] = rawValue.join(", ");
-            } else if (rawValue === null || rawValue === undefined || rawValue === "") {
-              mappedAnswers[field.id] = "-";
-            } else if (typeof rawValue === "object") {
-              mappedAnswers[field.id] = JSON.stringify(rawValue);
-            } else {
-              mappedAnswers[field.id] = String(rawValue);
-            }
+            mappedAnswers[field.id] = normalizeAnswerValue(answers[field.id]);
           });
 
           return {
